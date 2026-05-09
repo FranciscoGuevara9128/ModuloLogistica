@@ -1,0 +1,26 @@
+name: Sync Fork con Upstream
+
+on:
+  schedule:
+    # Se ejecuta de forma automática. 
+    # El formato es Cron (Minuto, Hora, Día del mes, Mes, Día de la semana en UTC)
+    # Ejemplo: '0 0 * * *' se ejecuta todos los días a la medianoche UTC
+    - cron: '0 */6 * * *' # Se ejecuta cada 6 horas
+  workflow_dispatch: # Te permite activar la sincronización manualmente con un botón
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del Fork
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sincronizar con el repositorio original
+        uses: aormsby/Fork-Sync-With-Upstream-action@v3.4
+        with:
+          target_repo_token: ${{ secrets.GITHUB_TOKEN }}
+          target_branch: main        # Tu rama destino (normalmente main o master)
+          upstream_sync_branch: main # La rama que quieres copiar del repo original
+          upstream_sync_repo: ProgramacionALSoluciones/ModuloLogistica # Reemplaza con los datos reales
