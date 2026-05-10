@@ -64,6 +64,7 @@ export const enviarTransporte = async ({ cliente_directo_id, tipo_polin_id, colo
     .eq('color_polin_id', color_polin_id)
     .in('estado_uso', ['ALMACENAMIENTO', 'PULL_FIJO'])
     .is('fecha_fin', null)
+    .order('estado_uso', { ascending: true }) // ALMACENAMIENTO before PULL_FIJO
     .order('fecha_inicio', { ascending: false });
 
   if (errGet) throw new Error(errGet.message);

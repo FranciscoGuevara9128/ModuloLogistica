@@ -8,7 +8,7 @@ const BADGE = {
   PULL_FIJO:      'bg-indigo-100 text-indigo-800'
 };
 
-const Liberaciones = () => {
+const Devoluciones = () => {
   const [formData, setFormData] = useState({ grupo_movimiento: '', cantidad_liberar: '', fecha_manual: '' });
   const { user } = useAuth();
   const [movSeleccionado, setMovSeleccionado] = useState(null);
@@ -106,15 +106,15 @@ const Liberaciones = () => {
       // Update inventory directly by refetching due to complexities
       fetchReferencias();
     } catch (err) {
-      setMensaje({ tipo: 'error', texto: 'Error al liberar polines. ' + (err.response?.data?.error || err.message) });
+      setMensaje({ tipo: 'error', texto: 'Error al devolver polines. ' + (err.response?.data?.error || err.message) });
     }
   };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800 border-b pb-2">Liberación de Polines</h1>
+      <h1 className="text-2xl font-bold text-gray-800 border-b pb-2">Devolución de Polines</h1>
       <p className="text-gray-600 text-sm">
-        Libera polines. Estos pasarán al estado "Pendiente de Recepción" hasta que el administrador consolide las cantidades reales retornadas y siniestradas.
+        Devuelve polines. Estos pasarán al estado "Pendiente de Recepción" hasta que el administrador consolide las cantidades reales retornadas y siniestradas.
       </p>
 
       {mensaje.texto && (
@@ -127,7 +127,7 @@ const Liberaciones = () => {
         {/* Selector de movimiento agrupado */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Inventario a Liberar
+            Inventario a Devolver
           </label>
           <select
             name="grupo_movimiento"
@@ -157,7 +157,7 @@ const Liberaciones = () => {
         {/* Cantidad a liberar */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Cantidad a Liberar
+            Cantidad a Devolver
           </label>
           <input
             type="number"
@@ -172,12 +172,12 @@ const Liberaciones = () => {
           />
           {movSeleccionado && formData.cantidad_liberar !== '' && parseInt(formData.cantidad_liberar, 10) < movSeleccionado.cantidad_restante && (
             <p className="mt-1 text-xs text-amber-600">
-              Liberación parcial — {movSeleccionado.cantidad_restante - parseInt(formData.cantidad_liberar, 10)} unidades permanecerán activas para este grupo.
+              Devolución parcial — {movSeleccionado.cantidad_restante - parseInt(formData.cantidad_liberar, 10)} unidades permanecerán activas para este grupo.
             </p>
           )}
           {movSeleccionado && formData.cantidad_liberar !== '' && parseInt(formData.cantidad_liberar, 10) === movSeleccionado.cantidad_restante && (
             <p className="mt-1 text-xs text-emerald-600">
-              Liberación total — todo el inventario de este grupo pasará a pendiente de recepción.
+              Devolución total — todo el inventario de este grupo pasará a pendiente de recepción.
             </p>
           )}
         </div>
@@ -203,7 +203,7 @@ const Liberaciones = () => {
             type="submit"
             className="w-full bg-primary-500 hover:bg-primary-600 text-black font-bold py-2.5 px-4 rounded-md transition duration-150 shadow-sm"
           >
-            Confirmar Liberación
+            Confirmar Devolución
           </button>
         </div>
       </form>
@@ -211,4 +211,4 @@ const Liberaciones = () => {
   );
 };
 
-export default Liberaciones;
+export default Devoluciones;

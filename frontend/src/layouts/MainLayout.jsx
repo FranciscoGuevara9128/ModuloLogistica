@@ -10,7 +10,7 @@ const MainLayout = () => {
     { name: 'Dashboard', href: '/', roles: ['ADMIN', 'CLIENTE_DIRECTO', 'CLIENTE_FINAL'] },
     { name: 'Entregas', href: '/entregas', roles: ['ADMIN'] },
     { name: 'Transporte', href: '/transporte', roles: ['ADMIN', 'CLIENTE_DIRECTO'] },
-    { name: 'Liberaciones', href: '/liberaciones', roles: ['ADMIN', 'CLIENTE_DIRECTO', 'CLIENTE_FINAL'] },
+    { name: 'Devoluciones', href: '/devoluciones', roles: ['ADMIN', 'CLIENTE_DIRECTO', 'CLIENTE_FINAL'] },
     { name: 'Mi Historial', href: '/perfil', roles: ['ADMIN', 'CLIENTE_DIRECTO', 'CLIENTE_FINAL'] },
     { name: 'Recepción', href: '/recepcion', roles: ['ADMIN'] },
     { name: 'Facturación', href: '/facturacion', roles: ['ADMIN'] },
