@@ -14,6 +14,7 @@ export const registrarEntrega = async (req, res) => {
     // Solo permitir fecha_manual si es ADMIN
     if (userRole !== 'ADMIN') {
       delete data.fecha_manual;
+      delete data.remision;
     }
 
     const result = await MovimientosService.registrarEntrega(data);
@@ -39,7 +40,8 @@ export const enviarTransporte = async (req, res) => {
       color_polin_id,
       cliente_final_id,
       cantidad_enviada: parseInt(cantidad_enviada, 10),
-      fecha_manual: userRole === 'ADMIN' ? req.body.fecha_manual : null
+      fecha_manual: userRole === 'ADMIN' ? req.body.fecha_manual : null,
+      orden_compra: req.body.orden_compra
     });
     res.status(200).json({ success: true, data: result });
   } catch (error) {
@@ -114,6 +116,7 @@ export const procesarRecepcion = async (req, res) => {
     // Solo permitir fecha_manual si es ADMIN
     if (userRole !== 'ADMIN') {
       delete data.fecha_manual;
+      delete data.remision;
     }
 
     const result = await MovimientosService.procesarRecepcion(data);

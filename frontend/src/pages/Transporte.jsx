@@ -7,7 +7,8 @@ const Transporte = () => {
     grupo_origen: '',
     cliente_final_id: '',
     cantidad_enviada: '',
-    fecha_manual: ''
+    fecha_manual: '',
+    orden_compra: ''
   });
   const { user } = useAuth();
   const [movSeleccionado, setMovSeleccionado] = useState(null);
@@ -89,7 +90,8 @@ const Transporte = () => {
         tipo_polin_id: movSeleccionado.tipo_polin_id,
         color_polin_id: movSeleccionado.color_polin_id,
         cliente_final_id: formData.cliente_final_id,
-        cantidad_enviada: parseInt(formData.cantidad_enviada, 10)
+        cantidad_enviada: parseInt(formData.cantidad_enviada, 10),
+        orden_compra: formData.orden_compra
       });
       const { restante_en_origen } = result.data.data;
       const origen_cerrado = restante_en_origen === 0;
@@ -99,7 +101,7 @@ const Transporte = () => {
         : `Envío parcial registrado. Quedan ${restante_en_origen} unidades en almacenamiento / pull fijo para este grupo.`;
 
       setMensaje({ tipo: 'success', texto: msg });
-      setFormData({ grupo_origen: '', cliente_final_id: '', cantidad_enviada: '', fecha_manual: '' });
+      setFormData({ grupo_origen: '', cliente_final_id: '', cantidad_enviada: '', fecha_manual: '', orden_compra: '' });
       setMovSeleccionado(null);
 
       // Actualizar referencias completas desde el backend
@@ -187,6 +189,21 @@ const Transporte = () => {
               <option key={cliente.id} value={cliente.id}>{cliente.nombre}</option>
             ))}
           </select>
+        </div>
+
+        {/* Orden de compra */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Orden de Compra (OC)
+          </label>
+          <input
+            type="text"
+            name="orden_compra"
+            className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 p-2 border"
+            value={formData.orden_compra}
+            onChange={handleChange}
+            placeholder="Ingrese la Orden de Compra"
+          />
         </div>
 
         {user?.role === 'ADMIN' && (
