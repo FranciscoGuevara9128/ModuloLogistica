@@ -21,6 +21,6 @@ jobs:
         uses: aormsby/Fork-Sync-With-Upstream-action@v3.4
         with:
           target_repo_token: ${{ secrets.GITHUB_TOKEN }}
-          target_branch: main        # Tu rama destino (normalmente main o master)
+          target_sync_branch: main        # Tu rama destino (normalmente main o master)
           upstream_sync_branch: main # La rama que quieres copiar del repo original
           upstream_sync_repo: ProgramacionALSoluciones/ModuloLogistica # Reemplaza con los datos reales
