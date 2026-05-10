@@ -314,8 +314,46 @@ export const getHistorial = async ({ rol, entityId }) => {
     query = query.eq('cliente_final_id', entityId);
   }
 
-  const { data, error } = await query;
+  const { data: movimientos, error } = await query;
   if (error) throw new Error(error.message);
-  return data;
+
+  if (!movimientos || movimientos.length === 0) return [];
+
+  const movIds = movimientos.map(m => m.id);
+
+  // Fetch recepciones associated with these movimientos
+  const { data: recepciones, error: errRec } = await supabase
+    .from('recepcion_polines')
+    .select('*')
+    .in('movimiento_origen_id', movIds);
+
+  if (errRec) throw new Error(errRec.message);
+
+  const historialCombinado = [...movimientos];
+
+  if (recepciones && recepciones.length > 0) {
+    recepciones.forEach(rec => {
+      const parentMov = movimientos.find(m => m.id === rec.movimiento_origen_id);
+      if (parentMov) {
+        historialCombinado.push({
+          id: `dev-${rec.id}`,
+          fecha_inicio: rec.fecha_liberacion,
+          tipo_movimiento: 'DEVOLUCION',
+          estado_uso: rec.estado_recepcion,
+          cantidad: rec.cantidad_liberada,
+          cantidad_restante: rec.cantidad_liberada,
+          fecha_fin: rec.estado_recepcion === 'RECIBIDO' ? rec.fecha_recepcion : null,
+          tipo_polin: parentMov.tipo_polin,
+          color_polin: parentMov.color_polin,
+          cliente_directo: parentMov.cliente_directo,
+          cliente_final: parentMov.cliente_final,
+        });
+      }
+    });
+  }
+
+  historialCombinado.sort((a, b) => new Date(b.fecha_inicio) - new Date(a.fecha_inicio));
+
+  return historialCombinado;
 };
 
