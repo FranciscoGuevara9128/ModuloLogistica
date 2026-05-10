@@ -73,7 +73,7 @@ const Dashboard = () => {
           <div className="bg-white border text-center rounded-lg shadow-  sm p-6 flex flex-col justify-center transform transition hover:scale-105">
             <h3 className="text-gray-500 text-sm font-medium uppercase tracking-wider">En Almacenamiento</h3>
             <p className="text-4xl font-extrabold text-blue-600 mt-2">{estadisticas.almacenamiento}</p>
-            <div className="mt-4 text-xs text-center text-gray-400">Polines actualmente en fábricas</div>
+            <div className="mt-4 text-xs text-center text-gray-400">Polines actualmente en plantas</div>
           </div>
 
           <div className="bg-white border text-center rounded-lg shadow-sm p-6 flex flex-col justify-center transform transition hover:scale-105">
@@ -138,7 +138,7 @@ const Dashboard = () => {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900">Fecha Envío</th>
-                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Procedencia (Fábrica)</th>
+                    <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Procedencia (Planta)</th>
                     <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Tipo de Polín</th>
                     <th className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">Pendientes a Devolver</th>
                   </tr>
