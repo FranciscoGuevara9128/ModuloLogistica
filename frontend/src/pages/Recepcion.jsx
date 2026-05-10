@@ -20,7 +20,8 @@ const Recepcion = () => {
           initialForm[rec.id] = {
             cantidad_buenos: rec.cantidad_liberada,
             cantidad_siniestrados: 0,
-            fecha_manual: ''
+            fecha_manual: '',
+            remision: ''
           };
         });
         setFormValues(initialForm);
@@ -41,7 +42,7 @@ const Recepcion = () => {
     setFormValues(prev => {
       const current = { ...prev[id] };
       
-      if (field === 'fecha_manual') {
+      if (field === 'fecha_manual' || field === 'remision') {
         current[field] = value;
         return { ...prev, [id]: current };
       }
@@ -75,7 +76,8 @@ const Recepcion = () => {
         recepcion_id: id,
         cantidad_buenos: vals.cantidad_buenos,
         cantidad_siniestrados: vals.cantidad_siniestrados,
-        fecha_manual: vals.fecha_manual
+        fecha_manual: vals.fecha_manual,
+        remision: vals.remision
       });
 
       if (result.data.success) {
@@ -126,7 +128,7 @@ const Recepcion = () => {
                   </div>
                 </div>
 
-                <div className="bg-gray-50 rounded p-4 grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                <div className={`bg-gray-50 rounded p-4 grid grid-cols-1 ${user?.role === 'ADMIN' ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-6 items-end`}>
                   <div>
                     <label className="block text-sm font-medium text-emerald-700 mb-1">
                       Buenos (Regresan a Inv.)
@@ -155,16 +157,30 @@ const Recepcion = () => {
                   </div>
                   
                   {user?.role === 'ADMIN' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Fecha Manual
-                      </label>
-                      <input
-                        type="datetime-local"
-                        className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 p-2 border text-xs"
-                        value={formValues[rec.id]?.fecha_manual ?? ''}
-                        onChange={(e) => handleChange(rec.id, 'fecha_manual', e.target.value)}
-                      />
+                    <div className="flex flex-col gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Remisión
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 p-2 border text-xs"
+                          value={formValues[rec.id]?.remision ?? ''}
+                          onChange={(e) => handleChange(rec.id, 'remision', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Fecha Manual
+                        </label>
+                        <input
+                          type="datetime-local"
+                          className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 p-2 border text-xs"
+                          value={formValues[rec.id]?.fecha_manual ?? ''}
+                          onChange={(e) => handleChange(rec.id, 'fecha_manual', e.target.value)}
+                        />
+                      </div>
                     </div>
                   )}
 

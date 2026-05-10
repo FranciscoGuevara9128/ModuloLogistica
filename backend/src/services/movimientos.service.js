@@ -3,7 +3,7 @@ import { supabase } from '../config/supabase.js';
 // ─────────────────────────────────────────────────────────────
 // REGISTRAR ENTREGA
 // ─────────────────────────────────────────────────────────────
-export const registrarEntrega = async ({ cliente_directo_id, tipo_polin_id, color_polin_id, cantidad, estado_uso = 'ALMACENAMIENTO', costo_entrega = 0, fecha_manual }) => {
+export const registrarEntrega = async ({ cliente_directo_id, tipo_polin_id, color_polin_id, cantidad, estado_uso = 'ALMACENAMIENTO', costo_entrega = 0, fecha_manual, remision }) => {
   const { data: inv, error: invGetError } = await supabase
     .from('inventario')
     .select('*')
@@ -25,7 +25,8 @@ export const registrarEntrega = async ({ cliente_directo_id, tipo_polin_id, colo
       tipo_movimiento: 'ENTREGA',
       estado_uso: estado_uso,
       costo_entrega: costo_entrega,
-      fecha_inicio: fecha_manual ? new Date(fecha_manual).toISOString() : new Date().toISOString()
+      fecha_inicio: fecha_manual ? new Date(fecha_manual).toISOString() : new Date().toISOString(),
+      remision: remision
     }])
     .select()
     .single();
@@ -50,7 +51,7 @@ export const registrarEntrega = async ({ cliente_directo_id, tipo_polin_id, colo
 // movimiento hijo, diferenciado por estado_uso='TRANSPORTE' y
 // movimiento_origen_id seteado.
 // ─────────────────────────────────────────────────────────────
-export const enviarTransporte = async ({ cliente_directo_id, tipo_polin_id, color_polin_id, cliente_final_id, cantidad_enviada, fecha_manual }) => {
+export const enviarTransporte = async ({ cliente_directo_id, tipo_polin_id, color_polin_id, cliente_final_id, cantidad_enviada, fecha_manual, orden_compra }) => {
   if (!cliente_final_id) throw new Error('cliente_final_id es obligatorio.');
   if (!cliente_directo_id || !tipo_polin_id || !color_polin_id) throw new Error('Debe especificar el origen completo.');
   if (!cantidad_enviada || cantidad_enviada <= 0) throw new Error('cantidad_enviada debe ser mayor a 0.');
@@ -64,6 +65,7 @@ export const enviarTransporte = async ({ cliente_directo_id, tipo_polin_id, colo
     .eq('color_polin_id', color_polin_id)
     .in('estado_uso', ['ALMACENAMIENTO', 'PULL_FIJO'])
     .is('fecha_fin', null)
+    .order('estado_uso', { ascending: true }) // ALMACENAMIENTO before PULL_FIJO
     .order('fecha_inicio', { ascending: false });
 
   if (errGet) throw new Error(errGet.message);
@@ -110,7 +112,8 @@ export const enviarTransporte = async ({ cliente_directo_id, tipo_polin_id, colo
         tipo_movimiento: 'ENTREGA',      // <-- FIX: evita chk_padre_envio
         estado_uso: 'TRANSPORTE',
         movimiento_origen_id: lote.id,
-        fecha_inicio: ahora
+        fecha_inicio: ahora,
+        orden_compra: orden_compra
       }])
       .select()
       .single();
@@ -242,7 +245,7 @@ export const getRecepcionesPendientes = async () => {
   return data;
 };
 
-export const procesarRecepcion = async ({ recepcion_id, cantidad_buenos, cantidad_siniestrados, fecha_manual }) => {
+export const procesarRecepcion = async ({ recepcion_id, cantidad_buenos, cantidad_siniestrados, fecha_manual, remision }) => {
   if (!recepcion_id) throw new Error('Debe especificar IDs de recepcion.');
 
   const { data: rec, error: getErr } = await supabase
@@ -265,7 +268,8 @@ export const procesarRecepcion = async ({ recepcion_id, cantidad_buenos, cantida
       cantidad_buenos,
       cantidad_siniestrados,
       estado_recepcion: 'RECIBIDO',
-      fecha_recepcion: fecha_manual ? new Date(fecha_manual).toISOString() : new Date().toISOString()
+      fecha_recepcion: fecha_manual ? new Date(fecha_manual).toISOString() : new Date().toISOString(),
+      remision
     })
     .eq('id', recepcion_id);
 
@@ -313,8 +317,47 @@ export const getHistorial = async ({ rol, entityId }) => {
     query = query.eq('cliente_final_id', entityId);
   }
 
-  const { data, error } = await query;
+  const { data: movimientos, error } = await query;
   if (error) throw new Error(error.message);
-  return data;
+
+  if (!movimientos || movimientos.length === 0) return [];
+
+  const movIds = movimientos.map(m => m.id);
+
+  // Fetch recepciones associated with these movimientos
+  const { data: recepciones, error: errRec } = await supabase
+    .from('recepcion_polines')
+    .select('*')
+    .in('movimiento_origen_id', movIds);
+
+  if (errRec) throw new Error(errRec.message);
+
+  const historialCombinado = [...movimientos];
+
+  if (recepciones && recepciones.length > 0) {
+    recepciones.forEach(rec => {
+      const parentMov = movimientos.find(m => m.id === rec.movimiento_origen_id);
+      if (parentMov) {
+        historialCombinado.push({
+          id: `dev-${rec.id}`,
+          fecha_inicio: rec.fecha_liberacion,
+          tipo_movimiento: 'DEVOLUCION',
+          estado_uso: rec.estado_recepcion,
+          cantidad: rec.cantidad_liberada,
+          cantidad_restante: rec.cantidad_liberada,
+          fecha_fin: rec.estado_recepcion === 'RECIBIDO' ? rec.fecha_recepcion : null,
+          tipo_polin: parentMov.tipo_polin,
+          color_polin: parentMov.color_polin,
+          cliente_directo: parentMov.cliente_directo,
+          cliente_final: parentMov.cliente_final,
+          remision: rec.remision,
+        });
+      }
+    });
+  }
+
+  historialCombinado.sort((a, b) => new Date(b.fecha_inicio) - new Date(a.fecha_inicio));
+
+  return historialCombinado;
 };
 

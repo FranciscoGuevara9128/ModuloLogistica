@@ -7,7 +7,8 @@ const Transporte = () => {
     grupo_origen: '',
     cliente_final_id: '',
     cantidad_enviada: '',
-    fecha_manual: ''
+    fecha_manual: '',
+    orden_compra: ''
   });
   const { user } = useAuth();
   const [movSeleccionado, setMovSeleccionado] = useState(null);
@@ -21,9 +22,9 @@ const Transporte = () => {
     try {
       const { data } = await getReferencias();
       if (data.success) {
-        // Solo movimientos en ALMACENAMIENTO con cantidad_restante > 0 y que sean raíz (no hijos)
+        // Solo movimientos en ALMACENAMIENTO o PULL_FIJO con cantidad_restante > 0 y que sean raíz (no hijos)
         const disponibles = data.data.movimientos_activos.filter(
-          m => m.estado_uso === 'ALMACENAMIENTO' && m.cantidad_restante > 0 && !m.es_hijo
+          m => ['ALMACENAMIENTO', 'PULL_FIJO'].includes(m.estado_uso) && m.cantidad_restante > 0 && !m.es_hijo
         );
 
         // Agrupar inventario por cliente, tipo de polín y color
@@ -89,17 +90,18 @@ const Transporte = () => {
         tipo_polin_id: movSeleccionado.tipo_polin_id,
         color_polin_id: movSeleccionado.color_polin_id,
         cliente_final_id: formData.cliente_final_id,
-        cantidad_enviada: parseInt(formData.cantidad_enviada, 10)
+        cantidad_enviada: parseInt(formData.cantidad_enviada, 10),
+        orden_compra: formData.orden_compra
       });
       const { restante_en_origen } = result.data.data;
       const origen_cerrado = restante_en_origen === 0;
 
       const msg = origen_cerrado
         ? 'Inventario completo enviado a transporte.'
-        : `Envío parcial registrado. Quedan ${restante_en_origen} unidades en almacenamiento para este grupo.`;
+        : `Envío parcial registrado. Quedan ${restante_en_origen} unidades en almacenamiento / pull fijo para este grupo.`;
 
       setMensaje({ tipo: 'success', texto: msg });
-      setFormData({ grupo_origen: '', cliente_final_id: '', cantidad_enviada: '', fecha_manual: '' });
+      setFormData({ grupo_origen: '', cliente_final_id: '', cantidad_enviada: '', fecha_manual: '', orden_compra: '' });
       setMovSeleccionado(null);
 
       // Actualizar referencias completas desde el backend
@@ -113,7 +115,7 @@ const Transporte = () => {
     <div className="max-w-2xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold text-gray-800 border-b pb-2">Enviar a Cliente Final</h1>
       <p className="text-gray-600 text-sm">
-        Envía polines directamente desde el almacén de un cliente hacia un cliente final. Puedes enviar una cantidad combinada usando el método LIFO.
+        Envía polines directamente desde el almacén o pull fijo de un cliente hacia un cliente final. Puedes enviar una cantidad combinada usando el método LIFO.
       </p>
 
       {mensaje.texto && (
@@ -126,7 +128,7 @@ const Transporte = () => {
         {/* Movimiento origen */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Inventario en Almacenamiento a Enviar
+            Inventario en Almacenamiento / Pull Fijo a Enviar
           </label>
           <select
             name="grupo_origen"
@@ -165,7 +167,7 @@ const Transporte = () => {
           />
           {movSeleccionado && parseInt(formData.cantidad_enviada, 10) < movSeleccionado.cantidad_restante && formData.cantidad_enviada !== '' && (
             <p className="mt-1 text-xs text-amber-600">
-              Envío parcial — {movSeleccionado.cantidad_restante - parseInt(formData.cantidad_enviada, 10)} unidades quedarán en almacenamiento.
+              Envío parcial — {movSeleccionado.cantidad_restante - parseInt(formData.cantidad_enviada, 10)} unidades quedarán en almacenamiento / pull fijo.
             </p>
           )}
         </div>
@@ -187,6 +189,21 @@ const Transporte = () => {
               <option key={cliente.id} value={cliente.id}>{cliente.nombre}</option>
             ))}
           </select>
+        </div>
+
+        {/* Orden de compra */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Orden de Compra (OC)
+          </label>
+          <input
+            type="text"
+            name="orden_compra"
+            className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 p-2 border"
+            value={formData.orden_compra}
+            onChange={handleChange}
+            placeholder="Ingrese la Orden de Compra"
+          />
         </div>
 
         {user?.role === 'ADMIN' && (

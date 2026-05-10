@@ -79,6 +79,12 @@ const Perfil = () => {
                       {user?.role !== 'CLIENTE_DIRECTO' && mov.cliente_directo && (
                         <div className="text-xs text-amber-600 mt-1">Origen: {mov.cliente_directo.nombre}</div>
                       )}
+                      {mov.remision && (
+                        <div className="text-xs text-gray-500 mt-1">Remisión: {mov.remision}</div>
+                      )}
+                      {mov.orden_compra && (
+                        <div className="text-xs text-gray-500 mt-1">OC: {mov.orden_compra}</div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {mov.tipo_movimiento}

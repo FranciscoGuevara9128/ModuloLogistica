@@ -3,7 +3,7 @@ import MainLayout from './layouts/MainLayout';
 import Dashboard from './pages/Dashboard';
 import Entregas from './pages/Entregas';
 import Transporte from './pages/Transporte';
-import Liberaciones from './pages/Liberaciones';
+import Devoluciones from './pages/Devoluciones';
 import Recepcion from './pages/Recepcion';
 import Facturacion from './pages/Facturacion';
 import Gestion from './pages/Gestion';
@@ -20,7 +20,7 @@ function App() {
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<MainLayout />}>
           <Route index element={<Dashboard />} />
-          <Route path="liberaciones" element={<Liberaciones />} />
+          <Route path="devoluciones" element={<Devoluciones />} />
           <Route path="perfil" element={<Perfil />} />
 
           {/* Rutas para Admin y Cliente Directo */}
