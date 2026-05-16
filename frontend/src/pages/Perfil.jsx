@@ -60,7 +60,6 @@ const Perfil = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Detalle</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</th>
                 </tr>
               </thead>
@@ -88,13 +87,6 @@ const Perfil = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {mov.tipo_movimiento}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                        ${mov.fecha_fin ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                        {mov.fecha_fin ? 'Finalizado' : 'Activo'}
-                      </span>
-                      <div className="text-[10px] text-gray-400 mt-0.5">{mov.estado_uso}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-gray-900">
                       {mov.cantidad}

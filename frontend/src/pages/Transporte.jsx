@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { enviarTransporte, getReferencias } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import ConfirmModal from '../components/ConfirmModal';
 
 const Transporte = () => {
   const [formData, setFormData] = useState({
@@ -11,6 +12,7 @@ const Transporte = () => {
     orden_compra: ''
   });
   const { user } = useAuth();
+  const [showConfirm, setShowConfirm] = useState(false);
   const [movSeleccionado, setMovSeleccionado] = useState(null);
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
   const [referencias, setReferencias] = useState({
@@ -81,8 +83,8 @@ const Transporte = () => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleConfirmSubmit = async () => {
+    setShowConfirm(false);
     setMensaje({ tipo: '', texto: '' });
     try {
       const result = await enviarTransporte({
@@ -109,6 +111,11 @@ const Transporte = () => {
     } catch (err) {
       setMensaje({ tipo: 'error', texto: 'Error al enviar a transporte. ' + (err.response?.data?.error || err.message) });
     }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setShowConfirm(true);
   };
 
   return (
@@ -231,6 +238,19 @@ const Transporte = () => {
           </button>
         </div>
       </form>
+
+      <ConfirmModal
+        isOpen={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        onConfirm={handleConfirmSubmit}
+        title="Confirmar Transporte"
+      >
+        <p><strong>Origen:</strong> {movSeleccionado?.cliente_nombre}</p>
+        <p><strong>Destino:</strong> {referencias.clientes_finales?.find(c => c.id == formData.cliente_final_id)?.nombre}</p>
+        <p><strong>Polín:</strong> {movSeleccionado?.tipo_nombre} ({movSeleccionado?.color_nombre})</p>
+        <p><strong>Cantidad a Enviar:</strong> {formData.cantidad_enviada}</p>
+        {formData.orden_compra && <p><strong>OC:</strong> {formData.orden_compra}</p>}
+      </ConfirmModal>
     </div>
   );
 };

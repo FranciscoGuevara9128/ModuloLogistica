@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { registrarEntrega, getReferencias } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import ConfirmModal from '../components/ConfirmModal';
 
 const Entregas = () => {
   const [formData, setFormData] = useState({
@@ -14,6 +15,7 @@ const Entregas = () => {
     remision: ''
   });
   const { user } = useAuth();
+  const [showConfirm, setShowConfirm] = useState(false);
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
   const [referencias, setReferencias] = useState({
     clientes_directos: [],
@@ -39,8 +41,8 @@ const Entregas = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleConfirmSubmit = async () => {
+    setShowConfirm(false);
     try {
       await registrarEntrega({
         ...formData,
@@ -52,6 +54,11 @@ const Entregas = () => {
     } catch (err) {
       setMensaje({ tipo: 'error', texto: 'Error al registrar entrega. ' + (err.response?.data?.error || err.message) });
     }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setShowConfirm(true);
   };
 
   return (
@@ -200,6 +207,19 @@ const Entregas = () => {
           </button>
         </div>
       </form>
+
+      <ConfirmModal
+        isOpen={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        onConfirm={handleConfirmSubmit}
+        title="Confirmar Entrega"
+      >
+        <p><strong>Cliente:</strong> {referencias.clientes_directos?.find(c => c.id == formData.cliente_directo_id)?.nombre}</p>
+        <p><strong>Polín:</strong> {referencias.tipos_polin?.find(t => t.id == formData.tipo_polin_id)?.nombre} ({referencias.colores_polin?.find(c => c.id == formData.color_polin_id)?.nombre})</p>
+        <p><strong>Cantidad:</strong> {formData.cantidad}</p>
+        <p><strong>Modalidad:</strong> {formData.estado_uso}</p>
+        {formData.remision && <p><strong>Remisión:</strong> {formData.remision}</p>}
+      </ConfirmModal>
     </div>
   );
 };
