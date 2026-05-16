@@ -299,7 +299,7 @@ export const procesarRecepcion = async ({ recepcion_id, cantidad_buenos, cantida
 // ─────────────────────────────────────────────────────────────
 // HISTORIAL DE MOVIMIENTOS
 // ─────────────────────────────────────────────────────────────
-export const getHistorial = async ({ rol, entityId }) => {
+export const getHistorial = async ({ rol, entityIds = [] }) => {
   let query = supabase
     .from('movimiento_polines')
     .select(`
@@ -311,10 +311,10 @@ export const getHistorial = async ({ rol, entityId }) => {
     `)
     .order('fecha_inicio', { ascending: false });
 
-  if (rol === 'CLIENTE_DIRECTO') {
-    query = query.eq('cliente_directo_id', entityId);
-  } else if (rol === 'CLIENTE_FINAL') {
-    query = query.eq('cliente_final_id', entityId);
+  if (rol === 'CLIENTE_DIRECTO' && entityIds.length > 0) {
+    query = query.in('cliente_directo_id', entityIds);
+  } else if (rol === 'CLIENTE_FINAL' && entityIds.length > 0) {
+    query = query.in('cliente_final_id', entityIds);
   }
 
   const { data: movimientos, error } = await query;

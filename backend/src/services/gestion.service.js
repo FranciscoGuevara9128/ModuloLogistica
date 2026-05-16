@@ -67,29 +67,67 @@ export const actualizarClienteFinal = async (id, datos, directosIds = []) => {
 export const listarUsuarios = async () => {
   const { data, error } = await supabase
     .from('usuario')
-    .select('*, cliente_directo:cliente_directo_id(nombre), cliente_final:cliente_final_id(nombre)')
+    .select(`
+      *,
+      rel_usuario_cliente_directo(cliente_directo_id, cliente_directo(nombre)),
+      rel_usuario_cliente_final(cliente_final_id, cliente_final(nombre))
+    `)
     .order('nombre');
   if (error) throw new Error(error.message);
   return data;
 };
 
-export const crearUsuario = async (datos) => {
+export const crearUsuario = async (datos, entityIds = []) => {
   if (datos.password) {
     datos.password = await bcrypt.hash(datos.password, 10);
   }
+  
+  // Limpiar campos que ya no deberían usarse directamente si se usan relaciones
+  // Pero los mantenemos en el objeto por si la tabla aún los tiene como obligatorios o para compatibilidad.
+  
   const { data, error } = await supabase.from('usuario').insert([datos]).select().single();
   if (error) throw new Error(error.message);
+
+  // Guardar relaciones según el rol
+  if (entityIds.length > 0) {
+    if (datos.rol === 'CLIENTE_DIRECTO') {
+      const rels = entityIds.map(id => ({ usuario_id: data.id, cliente_directo_id: id }));
+      await supabase.from('rel_usuario_cliente_directo').insert(rels);
+    } else if (datos.rol === 'CLIENTE_FINAL') {
+      const rels = entityIds.map(id => ({ usuario_id: data.id, cliente_final_id: id }));
+      await supabase.from('rel_usuario_cliente_final').insert(rels);
+    }
+  }
+
   return data;
 };
 
-export const actualizarUsuario = async (id, datos) => {
+export const actualizarUsuario = async (id, datos, entityIds = []) => {
   if (datos.password && datos.password.trim() !== '') {
     datos.password = await bcrypt.hash(datos.password, 10);
   } else {
     delete datos.password; // No actualizar si está vacío
   }
+  
   const { data, error } = await supabase.from('usuario').update(datos).eq('id', id).select().single();
   if (error) throw new Error(error.message);
+
+  // Sincronizar relaciones
+  // Primero borrar existentes
+  await supabase.from('rel_usuario_cliente_directo').delete().eq('usuario_id', id);
+  await supabase.from('rel_usuario_cliente_final').delete().eq('usuario_id', id);
+
+  // Insertar nuevas
+  if (entityIds.length > 0) {
+    if (datos.rol === 'CLIENTE_DIRECTO') {
+      const rels = entityIds.map(eid => ({ usuario_id: id, cliente_directo_id: eid }));
+      await supabase.from('rel_usuario_cliente_directo').insert(rels);
+    } else if (datos.rol === 'CLIENTE_FINAL') {
+      const rels = entityIds.map(eid => ({ usuario_id: id, cliente_final_id: eid }));
+      await supabase.from('rel_usuario_cliente_final').insert(rels);
+    }
+  }
+
   return data;
 };
 
