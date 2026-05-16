@@ -21,20 +21,44 @@ const Dashboard = () => {
             setMovimientos(data.data.movimientos_activos || []);
           }
         } else if (user?.role === 'CLIENTE_DIRECTO' || user?.role === 'ADMIN') {
-          // Tanto Admin como Cliente Directo pueden usar las referencias (ya filtradas en el backend)
-          // para calcular sus estadísticas globales/consolidadas.
           const { data } = await getReferencias();
           if (data.success) {
             const movs = data.data.movimientos_activos || [];
+            
+            // Estadísticas Globales (Solo para Admin)
             let totalAlm = 0;
             let totalTransp = 0;
             let totalPull = 0;
+            
+            // Estadísticas por Cliente (Para desglose independiente)
+            const porCliente = {};
+
             movs.forEach(m => {
-              if (m.estado_uso === 'ALMACENAMIENTO') totalAlm += m.cantidad_restante;
-              if (m.estado_uso === 'TRANSPORTE') totalTransp += m.cantidad_restante;
-              if (m.estado_uso === 'PULL_FIJO') totalPull += m.cantidad_restante;
+              const cid = m.cliente_directo_id;
+              const cname = m.cliente_directo?.nombre || 'Desconocido';
+              
+              if (!porCliente[cid]) {
+                porCliente[cid] = { nombre: cname, almacenamiento: 0, transporte: 0, pull_fijo: 0 };
+              }
+
+              if (m.estado_uso === 'ALMACENAMIENTO') {
+                totalAlm += m.cantidad_restante;
+                porCliente[cid].almacenamiento += m.cantidad_restante;
+              }
+              if (m.estado_uso === 'TRANSPORTE') {
+                totalTransp += m.cantidad_restante;
+                porCliente[cid].transporte += m.cantidad_restante;
+              }
+              if (m.estado_uso === 'PULL_FIJO') {
+                totalPull += m.cantidad_restante;
+                porCliente[cid].pull_fijo += m.cantidad_restante;
+              }
             });
-            setEstadisticas({ almacenamiento: totalAlm, transporte: totalTransp, pull_fijo: totalPull });
+
+            setEstadisticas({ 
+              global: { almacenamiento: totalAlm, transporte: totalTransp, pull_fijo: totalPull },
+              porCliente: Object.values(porCliente)
+            });
             setMovimientos(movs);
           }
         }
@@ -61,26 +85,49 @@ const Dashboard = () => {
         </span>
       </h1>
 
-      {/* KPI Cards para Admin y Cliente Directo */}
-      {(user?.role === 'ADMIN' || user?.role === 'CLIENTE_DIRECTO') && estadisticas && (
+      {/* KPI Cards para Admin (Global) */}
+      {user?.role === 'ADMIN' && estadisticas?.global && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-          <div className="bg-white border text-center rounded-lg shadow-  sm p-6 flex flex-col justify-center transform transition hover:scale-105">
-            <h3 className="text-gray-500 text-sm font-medium uppercase tracking-wider">En Almacenamiento</h3>
-            <p className="text-4xl font-extrabold text-blue-600 mt-2">{estadisticas.almacenamiento}</p>
-            <div className="mt-4 text-xs text-center text-gray-400">Polines actualmente en plantas</div>
+          <div className="bg-white border text-center rounded-lg shadow-sm p-6 flex flex-col justify-center">
+            <h3 className="text-gray-500 text-sm font-medium uppercase tracking-wider">Total Almacenamiento</h3>
+            <p className="text-4xl font-extrabold text-blue-600 mt-2">{estadisticas.global.almacenamiento}</p>
           </div>
+          <div className="bg-white border text-center rounded-lg shadow-sm p-6 flex flex-col justify-center">
+            <h3 className="text-gray-500 text-sm font-medium uppercase tracking-wider">Total Transporte</h3>
+            <p className="text-4xl font-extrabold text-amber-600 mt-2">{estadisticas.global.transporte}</p>
+          </div>
+          <div className="bg-white border text-center rounded-lg shadow-sm p-6 flex flex-col justify-center">
+            <h3 className="text-gray-500 text-sm font-medium uppercase tracking-wider">Total Pull Fijo</h3>
+            <p className="text-4xl font-extrabold text-indigo-600 mt-2">{estadisticas.global.pull_fijo || 0}</p>
+          </div>
+        </div>
+      )}
 
-          <div className="bg-white border text-center rounded-lg shadow-sm p-6 flex flex-col justify-center transform transition hover:scale-105">
-            <h3 className="text-gray-500 text-sm font-medium uppercase tracking-wider">En Transporte</h3>
-            <p className="text-4xl font-extrabold text-amber-600 mt-2">{estadisticas.transporte}</p>
-            <div className="mt-4 text-xs text-center text-gray-400">Polines enviados a clientes finales</div>
-          </div>
-
-          <div className="bg-white border text-center rounded-lg shadow-sm p-6 flex flex-col justify-center transform transition hover:scale-105">
-            <h3 className="text-gray-500 text-sm font-medium uppercase tracking-wider">En Pull Fijo</h3>
-            <p className="text-4xl font-extrabold text-indigo-600 mt-2">{estadisticas.pull_fijo || 0}</p>
-            <div className="mt-4 text-xs text-center text-gray-400">Polines en depósito fijo</div>
-          </div>
+      {/* KPI por Cliente (Para Usuarios Multi-Entidad) */}
+      {user?.role === 'CLIENTE_DIRECTO' && estadisticas?.porCliente && (
+        <div className="space-y-10 mt-8">
+          {estadisticas.porCliente.map((cliente, idx) => (
+            <div key={idx} className="space-y-4">
+              <h2 className="text-xl font-bold text-indigo-700 flex items-center border-b pb-2">
+                <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-7h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                {cliente.nombre}
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white border-l-4 border-l-blue-500 rounded-lg shadow-sm p-5 hover:shadow-md transition">
+                  <h3 className="text-gray-500 text-xs font-bold uppercase">Almacenamiento</h3>
+                  <p className="text-3xl font-bold text-blue-600">{cliente.almacenamiento}</p>
+                </div>
+                <div className="bg-white border-l-4 border-l-amber-500 rounded-lg shadow-sm p-5 hover:shadow-md transition">
+                  <h3 className="text-gray-500 text-xs font-bold uppercase">En Transporte</h3>
+                  <p className="text-3xl font-bold text-amber-600">{cliente.transporte}</p>
+                </div>
+                <div className="bg-white border-l-4 border-l-indigo-500 rounded-lg shadow-sm p-5 hover:shadow-md transition">
+                  <h3 className="text-gray-500 text-xs font-bold uppercase">Pull Fijo</h3>
+                  <p className="text-3xl font-bold text-indigo-600">{cliente.pull_fijo}</p>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
