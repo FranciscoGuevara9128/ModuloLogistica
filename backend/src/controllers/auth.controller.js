@@ -18,7 +18,11 @@ export const login = async (req, res) => {
     // 1. Buscar usuario por email
     const { data: usuario, error } = await supabase
       .from('usuario')
-      .select('*, cliente_directo:cliente_directo_id(nombre), cliente_final:cliente_final_id(nombre)')
+      .select(`
+        *,
+        rel_usuario_cliente_directo ( cliente_directo ( id, nombre ) ),
+        rel_usuario_cliente_final ( cliente_final ( id, nombre ) )
+      `)
       .eq('email', email)
       .eq('activo', true)
       .single();
@@ -38,20 +42,28 @@ export const login = async (req, res) => {
     let frontendRole = usuario.rol;
     if (usuario.rol === 'PERSONAL') frontendRole = 'ADMIN';
 
-    // 4. Determinar entityName
+    // 4. Determinar entityName y entityIds
     let entityName = usuario.nombre;
-    if (usuario.rol === 'CLIENTE_DIRECTO' && usuario.cliente_directo) {
-      entityName = usuario.cliente_directo.nombre;
-    } else if (usuario.rol === 'CLIENTE_FINAL' && usuario.cliente_final) {
-      entityName = usuario.cliente_final.nombre;
+    let entityIds = [];
+    
+    if (usuario.rol === 'CLIENTE_DIRECTO' && usuario.rel_usuario_cliente_directo) {
+      entityIds = usuario.rel_usuario_cliente_directo.map(r => r.cliente_directo.id);
+      entityName = usuario.rel_usuario_cliente_directo.map(r => r.cliente_directo.nombre).join(', ') || usuario.nombre;
+    } else if (usuario.rol === 'CLIENTE_FINAL' && usuario.rel_usuario_cliente_final) {
+      entityIds = usuario.rel_usuario_cliente_final.map(r => r.cliente_final.id);
+      entityName = usuario.rel_usuario_cliente_final.map(r => r.cliente_final.nombre).join(', ') || usuario.nombre;
     }
+
+    // Por compatibilidad temporal (si solo hay 1)
+    const primaryEntityId = entityIds.length > 0 ? entityIds[0] : null;
 
     // 5. Generar Token JWT
     const token = jwt.sign(
       { 
         id: usuario.id, 
         rol: frontendRole, 
-        entityId: usuario.cliente_directo_id || usuario.cliente_final_id || null 
+        entityId: primaryEntityId,
+        entityIds 
       },
       JWT_SECRET,
       { expiresIn: '8h' }
@@ -66,7 +78,8 @@ export const login = async (req, res) => {
         ...userSession,
         role: frontendRole,
         entityName,
-        entityId: usuario.cliente_directo_id || usuario.cliente_final_id || null
+        entityId: primaryEntityId,
+        entityIds
       }
     });
 

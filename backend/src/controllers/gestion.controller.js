@@ -72,7 +72,8 @@ export const getUsuarios = async (req, res) => {
 
 export const postUsuario = async (req, res) => {
   try {
-    const data = await GestionService.crearUsuario(req.body);
+    const { entityIds, ...datos } = req.body;
+    const data = await GestionService.crearUsuario(datos, entityIds);
     res.json({ success: true, data });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -82,7 +83,8 @@ export const postUsuario = async (req, res) => {
 export const putUsuario = async (req, res) => {
   try {
     const { id } = req.params;
-    const data = await GestionService.actualizarUsuario(id, req.body);
+    const { entityIds, ...datos } = req.body;
+    const data = await GestionService.actualizarUsuario(id, datos, entityIds);
     res.json({ success: true, data });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

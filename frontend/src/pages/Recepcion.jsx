@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { getRecepcionesPendientes, procesarRecepcion } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import ConfirmModal from '../components/ConfirmModal';
 
 const Recepcion = () => {
   const [recepciones, setRecepciones] = useState([]);
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
   const [formValues, setFormValues] = useState({});
   const { user } = useAuth();
+  const [confirmId, setConfirmId] = useState(null);
 
   const fetchPendientes = async () => {
     try {
@@ -61,7 +63,7 @@ const Recepcion = () => {
     });
   };
 
-  const handleProcesar = async (id) => {
+  const handleProcesar = (id) => {
     setMensaje({ tipo: '', texto: '' });
     const vals = formValues[id];
     const rec = recepciones.find(r => r.id === id);
@@ -70,6 +72,14 @@ const Recepcion = () => {
       setMensaje({ tipo: 'error', texto: `La suma de buenos y siniestrados debe ser exactamente ${rec.cantidad_liberada}.` });
       return;
     }
+
+    setConfirmId(id);
+  };
+
+  const handleConfirmProcesar = async () => {
+    const id = confirmId;
+    setConfirmId(null);
+    const vals = formValues[id];
 
     try {
       const result = await procesarRecepcion({
@@ -117,7 +127,7 @@ const Recepcion = () => {
                   <div>
                     <h3 className="text-lg font-semibold text-gray-800">Liberación desde: {origen}</h3>
                     <p className="text-sm text-gray-500">
-                      Polín: <span className="font-medium text-gray-700">{mov.tipo_polin?.nombre} ({mov.color_polin?.nombre})</span> | 
+                      Polín: <span className="font-medium text-gray-700">{mov.color_polin?.nombre}</span> | 
                       Modalidad Original: {mov.estado_uso}
                     </p>
                     <p className="text-xs text-gray-400 mt-1">Fecha Liberación: {new Date(rec.fecha_liberacion).toLocaleString()}</p>
@@ -198,6 +208,23 @@ const Recepcion = () => {
           })}
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!confirmId}
+        onClose={() => setConfirmId(null)}
+        onConfirm={handleConfirmProcesar}
+        title="Confirmar Recepción"
+      >
+        {confirmId && recepciones.find(r => r.id === confirmId) && (
+          <>
+            <p><strong>Polín:</strong> {recepciones.find(r => r.id === confirmId).movimiento_polines?.tipo_polin?.nombre} ({recepciones.find(r => r.id === confirmId).movimiento_polines?.color_polin?.nombre})</p>
+            <p><strong>Total a Recibir:</strong> {recepciones.find(r => r.id === confirmId).cantidad_liberada}</p>
+            <p><strong>Buenos:</strong> {formValues[confirmId]?.cantidad_buenos}</p>
+            <p><strong>Siniestrados:</strong> {formValues[confirmId]?.cantidad_siniestrados}</p>
+            {formValues[confirmId]?.remision && <p><strong>Remisión:</strong> {formValues[confirmId]?.remision}</p>}
+          </>
+        )}
+      </ConfirmModal>
     </div>
   );
 };

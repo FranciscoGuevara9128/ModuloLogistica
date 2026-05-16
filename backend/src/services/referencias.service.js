@@ -1,9 +1,10 @@
 import { supabase } from '../config/supabase.js';
 
-export const obtenerReferencias = async (userRole, entityId) => {
+export const obtenerReferencias = async (userRole, entityIds) => {
+  const ids = Array.isArray(entityIds) ? entityIds : (entityIds ? [entityIds] : []);
   // 1. Clientes Directos
   let qDirectos = supabase.from('cliente_directo').select('id, nombre, contacto, telefono, email').eq('activo', true);
-  if (userRole === 'CLIENTE_DIRECTO') qDirectos = qDirectos.eq('id', entityId);
+  if (userRole === 'CLIENTE_DIRECTO' && ids.length > 0) qDirectos = qDirectos.in('id', ids);
 
   const { data: clientesDirectos, error: errCD } = await qDirectos;
   if (errCD) throw new Error(errCD.message);
@@ -15,9 +16,9 @@ export const obtenerReferencias = async (userRole, entityId) => {
     qFinales = supabase
       .from('cliente_final')
       .select('id, nombre, ubicacion, rel_cliente_directo_final!inner(cliente_directo_id)')
-      .eq('rel_cliente_directo_final.cliente_directo_id', entityId);
-  } else if (userRole === 'CLIENTE_FINAL') {
-    qFinales = supabase.from('cliente_final').select('id, nombre, ubicacion').eq('id', entityId);
+      .in('rel_cliente_directo_final.cliente_directo_id', ids);
+  } else if (userRole === 'CLIENTE_FINAL' && ids.length > 0) {
+    qFinales = supabase.from('cliente_final').select('id, nombre, ubicacion').in('id', ids);
   } else {
     // ADMIN o sin rol: todos
     qFinales = supabase.from('cliente_final').select('id, nombre, ubicacion');
@@ -42,13 +43,7 @@ export const obtenerReferencias = async (userRole, entityId) => {
   let qMov = supabase
     .from('movimiento_polines')
     .select(`
-      id,
-      cantidad,
-      cantidad_restante,
-      tipo_movimiento,
-      estado_uso,
-      fecha_inicio,
-      movimiento_origen_id,
+      *,
       cliente_directo:cliente_directo_id ( id, nombre ),
       cliente_final:cliente_final_id ( id, nombre ),
       tipo_polin:tipo_polin_id ( id, nombre ),
@@ -57,9 +52,9 @@ export const obtenerReferencias = async (userRole, entityId) => {
     .is('fecha_fin', null)
     .order('fecha_inicio', { ascending: false });
 
-  if (userRole === 'CLIENTE_DIRECTO') qMov = qMov.eq('cliente_directo_id', entityId);
-  if (userRole === 'CLIENTE_FINAL') {
-    qMov = qMov.eq('cliente_final_id', entityId).eq('estado_uso', 'TRANSPORTE');
+  if (userRole === 'CLIENTE_DIRECTO' && ids.length > 0) qMov = qMov.in('cliente_directo_id', ids);
+  if (userRole === 'CLIENTE_FINAL' && ids.length > 0) {
+    qMov = qMov.in('cliente_final_id', ids).eq('estado_uso', 'TRANSPORTE');
   }
 
   const { data: movimientosActivos, error: errMA } = await qMov;
@@ -79,12 +74,16 @@ export const obtenerReferencias = async (userRole, entityId) => {
       cantidad: mov.cantidad,
       cantidad_restante: restante,
       es_hijo: !!mov.movimiento_origen_id,
+      cliente_directo_id: mov.cliente_directo_id,
+      tipo_polin_id: mov.tipo_polin_id,
+      color_polin_id: mov.color_polin_id,
       cliente_directo: mov.cliente_directo,
       tipo_polin: mov.tipo_polin,
       color_polin: mov.color_polin,
       cliente_final: mov.cliente_final,
+      cliente_final_id: mov.cliente_final_id,
       fecha_inicio: mov.fecha_inicio,
-      label: `[${mov.estado_uso}] ${restante} ${tipoName} ${colorName} | ${clienteName}${destinoName}`
+      label: `[${mov.estado_uso}] ${restante} ${colorName} | ${clienteName}${destinoName}`
     };
   });
 

@@ -71,7 +71,10 @@ const Gestion = () => {
         const directosIds = item.rel_cliente_directo_final?.map(r => r.cliente_directo_id) || [];
         setFormData({ ...item, directosIds });
       } else if (activeTab === 'usuarios') {
-        setFormData({ ...item, password: '' }); // Limpiar password al editar usuario
+        const entityIds = item.rol === 'CLIENTE_DIRECTO'
+          ? item.rel_usuario_cliente_directo?.map(r => r.cliente_directo_id) || []
+          : item.rel_usuario_cliente_final?.map(r => r.cliente_final_id) || [];
+        setFormData({ ...item, password: '', entityIds });
       } else {
         setFormData({ ...item });
       }
@@ -79,7 +82,7 @@ const Gestion = () => {
       if (activeTab === 'finales') {
         setFormData({ directosIds: [] });
       } else if (activeTab === 'usuarios') {
-        setFormData({ rol: '', activo: true, password: '' });
+        setFormData({ rol: '', activo: true, password: '', entityIds: [] });
       } else {
         setFormData({ activo: true });
       }
@@ -96,12 +99,14 @@ const Gestion = () => {
       let preparedData = { ...formData };
       
       // Eliminar objetos anidados comunes y campos que no existen en tablas base
-      const fieldsToRemove = ['tipo_polin', 'color_polin', 'cliente_directo', 'cliente_final', 'rel_cliente_directo_final'];
+      const fieldsToRemove = ['tipo_polin', 'color_polin', 'cliente_directo', 'cliente_final', 'rel_cliente_directo_final', 'rel_usuario_cliente_directo', 'rel_usuario_cliente_final'];
       fieldsToRemove.forEach(field => delete preparedData[field]);
 
       if (activeTab === 'usuarios') {
-        if (preparedData.rol !== 'CLIENTE_DIRECTO') preparedData.cliente_directo_id = null;
-        if (preparedData.rol !== 'CLIENTE_FINAL') preparedData.cliente_final_id = null;
+        // Los entityIds ya están en preparedData
+        // Podemos eliminar los campos individuales viejos para evitar conflictos en el backend
+        delete preparedData.cliente_directo_id;
+        delete preparedData.cliente_final_id;
       } else {
         // Para otras pestañas, asegurar que no se envíen campos de usuario
         delete preparedData.rol;
@@ -241,7 +246,10 @@ const Gestion = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.email}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.rol}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {item.cliente_directo?.nombre || item.cliente_final?.nombre || '-'}
+                      {item.rol === 'CLIENTE_DIRECTO' 
+                        ? (item.rel_usuario_cliente_directo?.map(r => r.cliente_directo?.nombre).join(', ') || '-')
+                        : (item.rel_usuario_cliente_final?.map(r => r.cliente_final?.nombre).join(', ') || '-')
+                      }
                     </td>
                   </>
                 )}
@@ -369,34 +377,56 @@ const Gestion = () => {
                     <input type="password" value={formData.password || ''} onChange={e => setFormData({...formData, password: e.target.value})} className="mt-1 block w-full border rounded-md p-2" placeholder="********" />
                   </div>
 
-                  {/* Asociación condicional */}
+                  {/* Asociación condicional (Múltiple) */}
                   {formData.rol === 'CLIENTE_DIRECTO' && (
                     <div className="bg-primary-50 p-3 rounded-md animate-slideDown border border-primary-100">
-                      <label className="block text-sm font-bold text-primary-900">Fábrica / Cliente Directo Asociado</label>
-                      <select 
-                        required 
-                        value={formData.cliente_directo_id || ''} 
-                        onChange={e => setFormData({...formData, cliente_directo_id: e.target.value})} 
-                        className="mt-1 block w-full border-primary-200 rounded-md p-2 bg-white focus:ring-primary-500 focus:border-primary-500"
-                      >
-                        <option value="">-- Seleccione Fábrica --</option>
-                        {data.directos.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                      </select>
+                      <label className="block text-sm font-bold text-primary-900 mb-2">Fábricas / Clientes Directos Asociados</label>
+                      <div className="max-h-40 overflow-y-auto border rounded-md p-3 space-y-2 bg-white">
+                        {data.directos.map(cd => (
+                          <label key={cd.id} className="flex items-center space-x-2 text-sm cursor-pointer hover:bg-gray-50 p-1 rounded transition">
+                            <input 
+                              type="checkbox" 
+                              checked={formData.entityIds?.includes(cd.id)} 
+                              onChange={e => {
+                                const ids = formData.entityIds || [];
+                                if (e.target.checked) {
+                                  setFormData({ ...formData, entityIds: [...ids, cd.id] });
+                                } else {
+                                  setFormData({ ...formData, entityIds: ids.filter(id => id !== cd.id) });
+                                }
+                              }}
+                               className="rounded text-primary-600 focus:ring-primary-500"
+                            />
+                            <span className="text-gray-700">{cd.nombre}</span>
+                          </label>
+                        ))}
+                      </div>
                     </div>
                   )}
 
                   {formData.rol === 'CLIENTE_FINAL' && (
-                    <div className="bg-amber-50 p-3 rounded-md animate-slideDown">
-                      <label className="block text-sm font-bold text-amber-700">Ubicación / Cliente Final Asociado</label>
-                      <select 
-                        required 
-                        value={formData.cliente_final_id || ''} 
-                        onChange={e => setFormData({...formData, cliente_final_id: e.target.value})} 
-                        className="mt-1 block w-full border-amber-200 rounded-md p-2 bg-white"
-                      >
-                        <option value="">-- Seleccione Ubicación --</option>
-                        {data.finales.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                      </select>
+                    <div className="bg-amber-50 p-3 rounded-md animate-slideDown border border-amber-100">
+                      <label className="block text-sm font-bold text-amber-700 mb-2">Ubicaciones / Clientes Finales Asociados</label>
+                      <div className="max-h-40 overflow-y-auto border rounded-md p-3 space-y-2 bg-white">
+                        {data.finales.map(cf => (
+                          <label key={cf.id} className="flex items-center space-x-2 text-sm cursor-pointer hover:bg-gray-50 p-1 rounded transition">
+                            <input 
+                              type="checkbox" 
+                              checked={formData.entityIds?.includes(cf.id)} 
+                              onChange={e => {
+                                const ids = formData.entityIds || [];
+                                if (e.target.checked) {
+                                  setFormData({ ...formData, entityIds: [...ids, cf.id] });
+                                } else {
+                                  setFormData({ ...formData, entityIds: ids.filter(id => id !== cf.id) });
+                                }
+                              }}
+                               className="rounded text-amber-600 focus:ring-amber-500"
+                            />
+                            <span className="text-gray-700">{cf.nombre}</span>
+                          </label>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </>

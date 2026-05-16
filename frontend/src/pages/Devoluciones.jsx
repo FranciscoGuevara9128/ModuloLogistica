@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { liberarPolines, getReferencias } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import ConfirmModal from '../components/ConfirmModal';
 
 const BADGE = {
   ALMACENAMIENTO: 'bg-blue-100 text-blue-800',
@@ -11,6 +12,7 @@ const BADGE = {
 const Devoluciones = () => {
   const [formData, setFormData] = useState({ grupo_movimiento: '', cantidad_liberar: '', fecha_manual: '' });
   const { user } = useAuth();
+  const [showConfirm, setShowConfirm] = useState(false);
   const [movSeleccionado, setMovSeleccionado] = useState(null);
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
   const [referencias, setReferencias] = useState({ movimientos_activos: [] });
@@ -53,7 +55,7 @@ const Devoluciones = () => {
 
         const lotes_agrupados = Object.values(agrupados).map(g => ({
           ...g,
-          label: `[${g.estado_uso}] Cliente: ${g.dueño_nombre} | Polín: ${g.tipo_nombre} (${g.color_nombre}) | Disponible: ${g.cantidad_restante}`
+          label: `[${g.estado_uso}] Cliente: ${g.dueño_nombre} | Disponible: ${g.cantidad_restante} (${g.color_nombre})`
         }));
 
         setReferencias({ movimientos_activos: lotes_agrupados });
@@ -81,8 +83,8 @@ const Devoluciones = () => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleConfirmSubmit = async () => {
+    setShowConfirm(false);
     setMensaje({ tipo: '', texto: '' });
     try {
       const cantidadEnviada = parseInt(formData.cantidad_liberar, 10);
@@ -108,6 +110,11 @@ const Devoluciones = () => {
     } catch (err) {
       setMensaje({ tipo: 'error', texto: 'Error al devolver polines. ' + (err.response?.data?.error || err.message) });
     }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setShowConfirm(true);
   };
 
   return (
@@ -207,6 +214,17 @@ const Devoluciones = () => {
           </button>
         </div>
       </form>
+
+      <ConfirmModal
+        isOpen={showConfirm}
+        onClose={() => setShowConfirm(false)}
+        onConfirm={handleConfirmSubmit}
+        title="Confirmar Devolución"
+      >
+        <p><strong>Origen:</strong> {movSeleccionado?.dueño_nombre}</p>
+        <p><strong>Polín:</strong> {movSeleccionado?.tipo_nombre} ({movSeleccionado?.color_nombre})</p>
+        <p><strong>Cantidad a Devolver:</strong> {formData.cantidad_liberar}</p>
+      </ConfirmModal>
     </div>
   );
 };

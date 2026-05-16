@@ -60,7 +60,6 @@ const Perfil = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Detalle</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cantidad</th>
                 </tr>
               </thead>
@@ -86,15 +85,16 @@ const Perfil = () => {
                         <div className="text-xs text-gray-500 mt-1">OC: {mov.orden_compra}</div>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {mov.tipo_movimiento}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                        ${mov.fecha_fin ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                        {mov.fecha_fin ? 'Finalizado' : 'Activo'}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${
+                        mov.tipo_movimiento === 'ENTREGA' ? 'bg-green-100 text-green-700' :
+                        mov.tipo_movimiento === 'ENVIO' ? 'bg-blue-100 text-blue-700' :
+                        mov.tipo_movimiento === 'TRANSFERENCIA' ? 'bg-purple-100 text-purple-700' :
+                        mov.tipo_movimiento === 'DEVOLUCION' ? 'bg-amber-100 text-amber-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {mov.tipo_movimiento}
                       </span>
-                      <div className="text-[10px] text-gray-400 mt-0.5">{mov.estado_uso}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-gray-900">
                       {mov.cantidad}
