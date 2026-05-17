@@ -14,6 +14,7 @@ const Transferencias = () => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [movSeleccionado, setMovSeleccionado] = useState(null);
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
+  const [loading, setLoading] = useState(false);
   const [referencias, setReferencias] = useState({
     movimientos_activos: []
   });
@@ -84,6 +85,7 @@ const Transferencias = () => {
   const handleConfirmSubmit = async () => {
     setShowConfirm(false);
     setMensaje({ tipo: '', texto: '' });
+    setLoading(true);
     try {
       const a_estado = movSeleccionado.estado_uso === 'ALMACENAMIENTO' ? 'PULL_FIJO' : 'ALMACENAMIENTO';
       
@@ -99,7 +101,7 @@ const Transferencias = () => {
 
       setMensaje({ tipo: 'success', texto: `Transferencia realizada con éxito hacia ${a_estado}.` });
       
-      // Generar PDF Automáticamente
+      // Generar PDF
       const ahora = new Date();
       generarPDFTransferencia({
         fecha: ahora.toLocaleDateString(),
@@ -118,120 +120,158 @@ const Transferencias = () => {
       fetchReferencias();
     } catch (err) {
       setMensaje({ tipo: 'error', texto: 'Error al realizar transferencia: ' + (err.response?.data?.error || err.message) });
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!movSeleccionado) {
+      setMensaje({ tipo: 'error', texto: 'Debe seleccionar el inventario de origen.' });
+      return;
+    }
     setShowConfirm(true);
   };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800 border-b pb-2">Transferencia Interna</h1>
-      <p className="text-gray-600 text-sm">
-        Mueve polines entre Almacenamiento y Pull Fijo para un mismo cliente. Esta operación no afecta la ubicación física, solo la categoría de uso.
-      </p>
+      <div className="flex items-center space-x-3 pb-2 border-b border-gray-200 dark:border-slate-800">
+        <div className="p-2 bg-violet-50 dark:bg-violet-950/50 rounded-lg text-violet-600 dark:text-violet-400">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+          </svg>
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-950 dark:text-slate-100">Transferencia Interna</h1>
+          <p className="text-gray-500 dark:text-slate-400 text-xs">
+            Mueve polines entre Almacenamiento y Pull Fijo para un mismo cliente.
+          </p>
+        </div>
+      </div>
 
       {mensaje.texto && (
-        <div className={`p-4 rounded-md flex justify-between items-center ${mensaje.tipo === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-          <span>{mensaje.texto}</span>
-          {mensaje.tipo === 'success' && (
-            <button 
-              onClick={() => {
-                // El estado previo se limpió, pero si quisiéramos permitir re-descarga 
-                // necesitaríamos guardar los datos del último movimiento exitoso.
-                // Por ahora, el aviso de éxito es suficiente ya que se descarga automático.
-              }}
-              className="hidden text-xs underline font-bold"
-            >
-              Descargar de nuevo
-            </button>
-          )}
+        <div className={`p-4 rounded-xl flex justify-between items-center transition-all ${
+          mensaje.tipo === 'success' 
+            ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50' 
+            : 'bg-rose-50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50'
+        }`}>
+          <span className="text-sm font-medium">{mensaje.texto}</span>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-5 bg-gray-50 p-6 rounded-lg border border-gray-100">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Origen de la Transferencia
-          </label>
-          <select
-            name="grupo_origen"
-            required
-            className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 p-2 border bg-white"
-            value={formData.grupo_origen}
-            onChange={handleMovimientoChange}
-          >
-            <option value="">-- Seleccione el Inventario --</option>
-            {referencias.movimientos_activos.map(mov => (
-              <option key={mov.id} value={mov.id}>{mov.label}</option>
-            ))}
-          </select>
-        </div>
-
-        {movSeleccionado && (
-          <div className="bg-white p-4 rounded border border-primary-100 shadow-sm animate-fadeIn">
-            <p className="text-sm">
-              Se transferirá desde <strong>{movSeleccionado.estado_uso}</strong> hacia <strong>{movSeleccionado.estado_uso === 'ALMACENAMIENTO' ? 'PULL_FIJO' : 'ALMACENAMIENTO'}</strong>
-            </p>
-          </div>
-        )}
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Cantidad a Transferir
-          </label>
-          <input
-            type="number"
-            name="cantidad"
-            required
-            min="1"
-            max={movSeleccionado?.cantidad_restante || undefined}
-            className="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
-            value={formData.cantidad}
-            onChange={handleChange}
-            placeholder={movSeleccionado ? `Máx. ${movSeleccionado.cantidad_restante}` : 'Seleccione un origen primero'}
-          />
-        </div>
-
-        {user?.role === 'ADMIN' && (
+      <form onSubmit={handleSubmit} className="space-y-5 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        
+        {/* Origen de Transferencia */}
+        <div className="bg-slate-50 dark:bg-slate-950/40 p-4 rounded-xl border border-slate-200/60 dark:border-slate-800/50 space-y-4">
+          <h3 className="text-sm font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider">Origen de la Transferencia</h3>
+          
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Fecha Manual (Opcional)
+            <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">
+              Inventario de Origen
             </label>
-            <input
-              type="datetime-local"
-              name="fecha_manual"
-              className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 p-2 border"
-              value={formData.fecha_manual}
-              onChange={handleChange}
-            />
+            <select
+              name="grupo_origen"
+              required
+              className="w-full rounded-xl border-slate-300 dark:border-slate-700 shadow-sm focus:border-violet-500 focus:ring-violet-500 p-2.5 border bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 transition-colors"
+              value={formData.grupo_origen}
+              onChange={handleMovimientoChange}
+            >
+              <option value="">-- Seleccione el Inventario --</option>
+              {referencias.movimientos_activos.map(mov => (
+                <option key={mov.id} value={mov.id}>{mov.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Destinos Inteligentes y Cantidad */}
+        {movSeleccionado && (
+          <div className="space-y-4 animate-fadeIn">
+            <div className="bg-slate-50 dark:bg-slate-950/40 p-4 rounded-xl border border-slate-200/60 dark:border-slate-800/50">
+              <p className="text-sm text-gray-700 dark:text-slate-300 flex items-center justify-between">
+                <span>Categoría Origen: <strong className="text-violet-600 dark:text-violet-400">{movSeleccionado.estado_uso}</strong></span>
+                <span className="text-gray-400">➜</span>
+                <span>Categoría Destino: <strong className="text-emerald-600 dark:text-emerald-400">{movSeleccionado.estado_uso === 'ALMACENAMIENTO' ? 'PULL_FIJO' : 'ALMACENAMIENTO'}</strong></span>
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Cantidad a Transferir */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 dark:text-slate-200 mb-1">
+                  Cantidad a Transferir
+                </label>
+                <input
+                  type="number"
+                  name="cantidad"
+                  required
+                  min="1"
+                  max={movSeleccionado?.cantidad_restante || undefined}
+                  className="w-full rounded-xl border-slate-300 dark:border-slate-700 shadow-sm focus:border-violet-500 focus:ring-violet-500 p-2.5 border bg-white dark:bg-slate-950 text-gray-900 dark:text-slate-100 transition-colors"
+                  value={formData.cantidad}
+                  onChange={handleChange}
+                  placeholder={`Máx. ${movSeleccionado.cantidad_restante}`}
+                />
+              </div>
+
+              {/* Fecha Manual (Solo Admin) */}
+              {user?.role === 'ADMIN' ? (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-800 dark:text-slate-200 mb-1">
+                    Fecha Manual (Opcional - Retroactivo)
+                  </label>
+                  <input
+                    type="datetime-local"
+                    name="fecha_manual"
+                    className="w-full rounded-xl border-slate-300 dark:border-slate-700 shadow-sm focus:border-violet-500 focus:ring-violet-500 p-2.5 border bg-white dark:bg-slate-950 text-gray-900 dark:text-slate-100 transition-colors"
+                    value={formData.fecha_manual}
+                    onChange={handleChange}
+                  />
+                </div>
+              ) : (
+                <div></div>
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-violet-600 hover:bg-violet-700 disabled:bg-violet-400 text-white font-bold py-3 px-4 rounded-xl transition duration-150 shadow-md shadow-violet-500/10 cursor-pointer flex items-center justify-center space-x-2"
+              >
+                {loading ? (
+                  <span>Procesando...</span>
+                ) : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                    </svg>
+                    <span>Realizar Transferencia</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         )}
-
-        <div className="pt-4 border-t">
-          <button
-            type="submit"
-            className="w-full bg-primary-500 hover:bg-primary-600 text-black font-bold py-2.5 px-4 rounded-md transition duration-150 shadow-sm"
-          >
-            Realizar Transferencia
-          </button>
-        </div>
       </form>
 
-      <ConfirmModal
-        isOpen={showConfirm}
-        onClose={() => setShowConfirm(false)}
-        onConfirm={handleConfirmSubmit}
-        title="Confirmar Transferencia Interna"
-      >
-        <p><strong>Cliente:</strong> {movSeleccionado?.cliente_nombre}</p>
-        <p><strong>De:</strong> {movSeleccionado?.estado_uso}</p>
-        <p><strong>A:</strong> {movSeleccionado?.estado_uso === 'ALMACENAMIENTO' ? 'PULL_FIJO' : 'ALMACENAMIENTO'}</p>
-        <p><strong>Polín:</strong> {movSeleccionado?.tipo_nombre} ({movSeleccionado?.color_nombre})</p>
-        <p><strong>Cantidad:</strong> {formData.cantidad}</p>
-      </ConfirmModal>
+      {showConfirm && (
+        <ConfirmModal
+          isOpen={showConfirm}
+          onClose={() => setShowConfirm(false)}
+          onConfirm={handleConfirmSubmit}
+          title="Confirmar Transferencia Interna"
+        >
+          <div className="space-y-2.5 text-gray-750 dark:text-slate-300">
+            <p><strong>Cliente:</strong> {movSeleccionado?.cliente_nombre}</p>
+            <p><strong>De:</strong> {movSeleccionado?.estado_uso}</p>
+            <p><strong>A:</strong> {movSeleccionado?.estado_uso === 'ALMACENAMIENTO' ? 'PULL_FIJO' : 'ALMACENAMIENTO'}</p>
+            <p><strong>Polín:</strong> {movSeleccionado?.tipo_nombre} ({movSeleccionado?.color_nombre})</p>
+            <p><strong>Cantidad:</strong> {formData.cantidad} unidades</p>
+          </div>
+        </ConfirmModal>
+      )}
     </div>
   );
 };

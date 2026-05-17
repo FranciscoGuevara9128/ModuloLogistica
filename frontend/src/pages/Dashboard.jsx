@@ -78,6 +78,35 @@ const Dashboard = () => {
     if (user) fetchData();
   }, [user]);
 
+  const obtenerMovimientosConsolidados = (movs) => {
+    if (user?.role !== 'ADMIN') {
+      return movs;
+    }
+
+    const normales = [];
+    const pullFijoAgrupado = {};
+
+    movs.forEach(m => {
+      if (m.estado_uso === 'PULL_FIJO') {
+        const key = `${m.cliente_directo_id}|${m.tipo_polin_id}|${m.color_polin_id}`;
+        if (!pullFijoAgrupado[key]) {
+          pullFijoAgrupado[key] = {
+            ...m,
+            id: `consolidado-pull-${key}`, // unique key to prevent React key warning
+            cantidad_restante: 0
+          };
+        }
+        pullFijoAgrupado[key].cantidad_restante += m.cantidad_restante;
+      } else {
+        normales.push(m);
+      }
+    });
+
+    return [...normales, ...Object.values(pullFijoAgrupado)];
+  };
+
+  const movimientosAMostrar = obtenerMovimientosConsolidados(movimientos);
+
   if (loading) return <div>Cargando dashboard...</div>;
   if (error) return <div className="text-red-500">{error}</div>;
 
@@ -137,11 +166,11 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Tabla global para Admin y Cliente Directo con desglose */}
-      {(user?.role === 'ADMIN' || user?.role === 'CLIENTE_DIRECTO') && (
+      {/* Tabla global para Admin con desglose consolidado */}
+      {user?.role === 'ADMIN' && (
         <div className="mt-8">
           <h2 className="text-lg font-bold text-gray-700 dark:text-slate-200 mb-4">
-            {user?.role === 'ADMIN' ? 'Inventario Global de Clientes' : 'Desglose de Inventario por Planta'}
+            Inventario Global de Clientes
           </h2>
           <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 md:rounded-lg border dark:border-slate-800">
             <table className="min-w-full divide-y divide-gray-300 dark:divide-slate-800">
@@ -154,7 +183,7 @@ const Dashboard = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-slate-800 bg-white dark:bg-slate-900">
-                {movimientos.map((m) => (
+                {movimientosAMostrar.map((m) => (
                   <tr key={m.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
                     <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium">
                       <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${

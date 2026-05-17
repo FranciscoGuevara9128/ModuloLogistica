@@ -10,6 +10,7 @@ import Gestion from './pages/Gestion';
 import Login from './pages/Login';
 import Perfil from './pages/Perfil';
 import Transferencias from './pages/Transferencias';
+import Traslados from './pages/Traslados';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
           <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'CLIENTE_DIRECTO']} />}>
             <Route path="transporte" element={<Transporte />} />
             <Route path="transferencias" element={<Transferencias />} />
+            <Route path="traslados" element={<Traslados />} />
           </Route>
 
           {/* Rutas Solo Admin */}

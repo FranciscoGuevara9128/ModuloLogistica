@@ -15,7 +15,8 @@ import {
   XMarkIcon,
   ArrowLeftOnRectangleIcon,
   SunIcon,
-  MoonIcon
+  MoonIcon,
+  ArrowsUpDownIcon
 } from '@heroicons/react/24/outline';
 import { useTheme } from '../context/ThemeContext';
 
@@ -39,6 +40,13 @@ const MainLayout = () => {
         { name: 'Transporte', href: '/transporte', icon: TruckIcon, roles: ['ADMIN', 'CLIENTE_DIRECTO'] },
         { name: 'Devoluciones', href: '/devoluciones', icon: ArrowPathIcon, roles: ['ADMIN', 'CLIENTE_DIRECTO', 'CLIENTE_FINAL'] },
         { name: 'Transferencias', href: '/transferencias', icon: ArrowsRightLeftIcon, roles: ['ADMIN', 'CLIENTE_DIRECTO'] },
+        { 
+          name: 'Traslados', 
+          href: '/traslados', 
+          icon: ArrowsUpDownIcon, 
+          roles: ['ADMIN', 'CLIENTE_DIRECTO'],
+          visible: (u) => u.role === 'ADMIN' || (u.role === 'CLIENTE_DIRECTO' && u.entityIds?.length > 1)
+        },
         { name: 'Recepción', href: '/recepcion', icon: InboxArrowDownIcon, roles: ['ADMIN'] },
       ]
     },
@@ -60,7 +68,12 @@ const MainLayout = () => {
   const filterNav = (groups) => {
     return groups.map(group => ({
       ...group,
-      items: group.items.filter(item => user && item.roles.includes(user.role))
+      items: group.items.filter(item => {
+        if (!user) return false;
+        if (!item.roles.includes(user.role)) return false;
+        if (item.visible && !item.visible(user)) return false;
+        return true;
+      })
     })).filter(group => group.items.length > 0);
   };
 
