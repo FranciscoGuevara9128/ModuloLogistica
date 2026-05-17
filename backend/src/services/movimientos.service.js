@@ -460,3 +460,93 @@ export const getHistorial = async ({ rol, entityIds = [] }) => {
   return historialCombinado;
 };
 
+// ─────────────────────────────────────────────────────────────
+// TRASLADO DE INVENTARIO ENTRE PLANTAS
+// ─────────────────────────────────────────────────────────────
+export const trasladarInventario = async ({ 
+  cliente_origen_id, 
+  cliente_destino_id, 
+  tipo_polin_id, 
+  color_polin_id, 
+  cantidad, 
+  de_estado = 'ALMACENAMIENTO', 
+  a_estado = 'ALMACENAMIENTO', 
+  fecha_manual 
+}) => {
+  if (!cliente_origen_id || !cliente_destino_id) {
+    throw new Error('Debe especificar la planta de origen y la de destino.');
+  }
+  if (cliente_origen_id === cliente_destino_id) {
+    throw new Error('La planta de origen y destino deben ser diferentes.');
+  }
+  if (!cantidad || cantidad <= 0) {
+    throw new Error('La cantidad a trasladar debe ser mayor a 0.');
+  }
+  if (!['ALMACENAMIENTO', 'PULL_FIJO'].includes(de_estado) || !['ALMACENAMIENTO', 'PULL_FIJO'].includes(a_estado)) {
+    throw new Error('Solo se permiten traslados de Almacenamiento o Pull Fijo.');
+  }
+
+  // 1. Obtener lotes activos del estado origen especificado para la planta de origen (FIFO)
+  const { data: lotes, error: errGet } = await supabase
+    .from('movimiento_polines')
+    .select('*')
+    .eq('cliente_directo_id', cliente_origen_id)
+    .eq('tipo_polin_id', tipo_polin_id)
+    .eq('color_polin_id', color_polin_id)
+    .eq('estado_uso', de_estado)
+    .is('fecha_fin', null)
+    .order('fecha_inicio', { ascending: true }); // FIFO
+
+  if (errGet) throw new Error(errGet.message);
+
+  let porTrasladar = parseInt(cantidad, 10);
+  const disponibleTotal = (lotes || []).reduce((sum, l) => sum + (l.cantidad_restante ?? l.cantidad), 0);
+  if (porTrasladar > disponibleTotal) {
+    throw new Error(`Inventario insuficiente en ${de_estado} de la planta de origen. Disponible: ${disponibleTotal}`);
+  }
+
+  const ahora = fecha_manual ? new Date(fecha_manual).toISOString() : new Date().toISOString();
+  const nuevosMovimientos = [];
+
+  for (const lote of lotes) {
+    if (porTrasladar <= 0) break;
+    const dispLote = lote.cantidad_restante ?? lote.cantidad;
+    const aMover = Math.min(dispLote, porTrasladar);
+    const nuevaRestante = dispLote - aMover;
+
+    // Actualizar origen (descontar inventario)
+    const { error: errUpd } = await supabase
+      .from('movimiento_polines')
+      .update({ 
+        cantidad_restante: nuevaRestante,
+        fecha_fin: nuevaRestante === 0 ? ahora : null
+      })
+      .eq('id', lote.id);
+    if (errUpd) throw new Error(errUpd.message);
+
+    // Crear en destino (agregar inventario con el estado destino indicado)
+    const { data: movDestino, error: errIns } = await supabase
+      .from('movimiento_polines')
+      .insert([{
+        cliente_directo_id: cliente_destino_id,
+        tipo_polin_id,
+        color_polin_id,
+        cantidad: aMover,
+        cantidad_restante: aMover,
+        tipo_movimiento: 'TRANSFERENCIA',
+        estado_uso: a_estado,
+        movimiento_origen_id: lote.id,
+        fecha_inicio: ahora
+      }])
+      .select().single();
+    
+    if (errIns) throw new Error(errIns.message);
+
+    nuevosMovimientos.push(movDestino);
+    porTrasladar -= aMover;
+  }
+
+  return nuevosMovimientos;
+};
+
+

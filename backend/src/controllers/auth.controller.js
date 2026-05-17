@@ -8,7 +8,7 @@ dotenv.config();
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key_123';
 
 export const login = async (req, res) => {
-  const { email, password } = req.body;
+  let { email, password } = req.body;
 
   if (!email || !password) {
     return res.status(400).json({ success: false, message: 'Email y contraseña son requeridos' });
@@ -45,7 +45,7 @@ export const login = async (req, res) => {
     // 4. Determinar entityName y entityIds
     let entityName = usuario.nombre;
     let entityIds = [];
-    
+
     if (usuario.rol === 'CLIENTE_DIRECTO' && usuario.rel_usuario_cliente_directo) {
       entityIds = usuario.rel_usuario_cliente_directo.map(r => r.cliente_directo.id);
       entityName = usuario.rel_usuario_cliente_directo.map(r => r.cliente_directo.nombre).join(', ') || usuario.nombre;
@@ -59,11 +59,11 @@ export const login = async (req, res) => {
 
     // 5. Generar Token JWT
     const token = jwt.sign(
-      { 
-        id: usuario.id, 
-        rol: frontendRole, 
+      {
+        id: usuario.id,
+        rol: frontendRole,
         entityId: primaryEntityId,
-        entityIds 
+        entityIds
       },
       JWT_SECRET,
       { expiresIn: '8h' }

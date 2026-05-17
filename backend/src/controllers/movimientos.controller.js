@@ -161,3 +161,40 @@ export const transferenciaInterna = async (req, res) => {
   }
 };
 
+export const trasladarInventario = async (req, res) => {
+  try {
+    const { cliente_origen_id, cliente_destino_id, tipo_polin_id, color_polin_id, cantidad, de_estado, a_estado, fecha_manual } = req.body;
+    const { rol: userRole, entityIds = [] } = req.user || {};
+
+    // Seguridad:
+    // 1. Debe ser ADMIN o CLIENTE_DIRECTO con múltiples clientes asociados
+    // 2. Si es CLIENTE_DIRECTO, debe tener permisos sobre AMBOS clientes (origen y destino)
+    if (userRole === 'CLIENTE_DIRECTO') {
+      if (entityIds.length <= 1) {
+        throw new Error('No tiene permisos para realizar traslados (debe estar asociado a más de una planta).');
+      }
+      if (!entityIds.includes(cliente_origen_id) || !entityIds.includes(cliente_destino_id)) {
+        throw new Error('No tiene permisos sobre alguna de las plantas especificadas para el traslado.');
+      }
+    } else if (userRole !== 'ADMIN') {
+      throw new Error('No tiene permisos para realizar traslados entre plantas.');
+    }
+
+    const result = await MovimientosService.trasladarInventario({
+      cliente_origen_id,
+      cliente_destino_id,
+      tipo_polin_id,
+      color_polin_id,
+      cantidad: parseInt(cantidad, 10),
+      de_estado,
+      a_estado,
+      fecha_manual: userRole === 'ADMIN' ? fecha_manual : null
+    });
+
+    res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+
