@@ -20,11 +20,6 @@ export default {
           800: '#8c7600',
           900: '#736100',
         },
-        brand: {
-          yellow: '#fad201',
-          dark: '#1a1a1a',
-          navy: '#0f172a',
-        }
       }
     },
   },
