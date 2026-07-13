@@ -9,11 +9,11 @@ const MESES = [
 ];
 
 const TRAMO_STYLE = {
-  ALMACENAMIENTO: { badge: 'bg-blue-100 text-blue-800', icon: '🏭', label: 'Almacenamiento' },
-  TRANSPORTE: { badge: 'bg-amber-100 text-amber-800', icon: '🚚', label: 'Transporte' },
-  PULL_FIJO: { badge: 'bg-indigo-100 text-indigo-800', icon: '📉', label: 'Pull Fijo' },
-  COSTO_ENTREGA: { badge: 'bg-emerald-100 text-emerald-800', icon: '💵', label: 'Costo Entrega' },
-  SINIESTRO: { badge: 'bg-red-100 text-red-800', icon: '🔥', label: 'Siniestro' }
+  ALMACENAMIENTO: { badge: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300', icon: '🏭', label: 'Almacenamiento Temporal' },
+  TRANSPORTE: { badge: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300', icon: '🚚', label: 'Tránsito' },
+  PULL_FIJO: { badge: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300', icon: '📉', label: 'Pull Fijo' },
+  COSTO_ENTREGA: { badge: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300', icon: '💵', label: 'Costo Entrega' },
+  SINIESTRO: { badge: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300', icon: '🔥', label: 'Siniestro' }
 };
 
 const Facturacion = () => {
@@ -67,18 +67,18 @@ const Facturacion = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800 border-b pb-2">Generar Facturación Mensual</h1>
-      <p className="text-gray-600 text-sm">
-        Calcula los montos por tramo: días en almacenamiento y días en transporte, con tarifas independientes.
+      <h1 className="text-2xl font-bold text-gray-950 dark:text-slate-100 border-b dark:border-slate-800 pb-2">Generar Facturación Mensual</h1>
+      <p className="text-gray-500 dark:text-slate-400 text-sm">
+        Calcula los montos por tramo: días en almacenamiento temporal y días en tránsito, con tarifas independientes.
       </p>
 
-      <form onSubmit={handleSubmit} className="bg-gray-50 p-6 rounded-lg border border-gray-100 flex flex-wrap gap-4 items-end">
+      <form onSubmit={handleSubmit} className="bg-slate-50 dark:bg-slate-900/60 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-wrap gap-4 items-end shadow-sm">
         <div className="flex-1 min-w-[200px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Cliente Directo a Facturar</label>
+          <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">Cliente Directo a Facturar</label>
           <select
             name="cliente_directo_id"
             required
-            className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 p-2 border bg-white"
+            className="w-full rounded-xl border-slate-300 dark:border-slate-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2.5 border bg-white dark:bg-slate-950 text-gray-900 dark:text-slate-100 transition-colors"
             value={formData.cliente_directo_id}
             onChange={handleChange}
           >
@@ -90,24 +90,24 @@ const Facturacion = () => {
         </div>
 
         <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Desde</label>
+          <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">Fecha Desde</label>
           <input
             type="date"
             name="fecha_desde"
             required
-            className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 p-2 border bg-white"
+            className="w-full rounded-xl border-slate-300 dark:border-slate-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2.5 border bg-white dark:bg-slate-950 text-gray-900 dark:text-slate-100 transition-colors"
             value={formData.fecha_desde}
             onChange={handleChange}
           />
         </div>
 
         <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Hasta</label>
+          <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1">Fecha Hasta</label>
           <input
             type="date"
             name="fecha_hasta"
             required
-            className="w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 p-2 border bg-white"
+            className="w-full rounded-xl border-slate-300 dark:border-slate-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2.5 border bg-white dark:bg-slate-950 text-gray-900 dark:text-slate-100 transition-colors"
             value={formData.fecha_hasta}
             onChange={handleChange}
           />
@@ -115,24 +115,28 @@ const Facturacion = () => {
 
         <button
           type="submit"
-          className="bg-primary-500 hover:bg-primary-600 text-black font-bold py-2 px-6 rounded-md transition duration-150 h-10 shadow-sm"
+          className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-6 rounded-xl transition duration-150 h-11 shadow-md shadow-indigo-500/10 cursor-pointer"
         >
           Generar y Calcular
         </button>
       </form>
 
       {mensaje.texto && (
-        <div className={`p-4 rounded-md ${mensaje.tipo === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-          {mensaje.texto}
+        <div className={`p-4 rounded-xl flex justify-between items-center transition-all ${
+          mensaje.tipo === 'success' 
+            ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50' 
+            : 'bg-rose-50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50'
+        }`}>
+          <span className="text-sm font-medium">{mensaje.texto}</span>
         </div>
       )}
 
       {factura && (
-        <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden">
           {/* Cabecera */}
-          <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-            <h3 className="text-lg font-medium text-gray-900">Resumen de Factura</h3>
-            <span className="bg-primary-100 text-primary-900 text-xs px-2.5 py-0.5 rounded-full font-bold font-mono border border-primary-200">
+          <div className="bg-slate-50 dark:bg-slate-800/30 px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-slate-100">Resumen de Factura</h3>
+            <span className="bg-indigo-100 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-300 text-xs px-2.5 py-0.5 rounded-full font-bold font-mono border border-indigo-200 dark:border-indigo-800/50">
               {factura.id?.slice(0, 8)}...
             </span>
           </div>
@@ -141,32 +145,32 @@ const Facturacion = () => {
             {/* Período */}
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-gray-500">Período Facturado</p>
-                <p className="font-medium">
+                <p className="text-gray-500 dark:text-slate-400">Período Facturado</p>
+                <p className="font-semibold text-gray-800 dark:text-slate-200">
                   {factura.fecha_desde ? `${new Date(factura.fecha_desde + 'T00:00:00').toLocaleDateString('es-NI')} → ${new Date(factura.fecha_hasta + 'T00:00:00').toLocaleDateString('es-NI')}` : `${mesNombre} ${factura.anio}`}
                 </p>
               </div>
               <div>
-                <p className="text-gray-500">Fecha de Generación</p>
-                <p className="font-medium">{new Date(factura.fecha_generacion).toLocaleDateString('es-NI')}</p>
+                <p className="text-gray-500 dark:text-slate-400">Fecha de Generación</p>
+                <p className="font-semibold text-gray-800 dark:text-slate-200">{new Date(factura.fecha_generacion).toLocaleDateString('es-NI')}</p>
               </div>
             </div>
 
             {/* Resumen extraído de detalles si existen */}
             {factura.detalles && factura.detalles.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 {Object.keys(TRAMO_STYLE).map(tramo => {
                   const subtotal = factura.detalles.filter(d => d.estado_tramo === tramo).reduce((acc, obj) => acc + parseFloat(obj.subtotal), 0);
                   if (subtotal === 0) return null;
                   const style = TRAMO_STYLE[tramo];
                   return (
-                    <div key={tramo} className={`rounded-lg p-3 border ${style.badge.split(' ')[0]} bg-opacity-30 border-opacity-50`}>
+                    <div key={tramo} className={`rounded-xl p-3 border ${style.badge.split(' ')[0]} bg-opacity-35 border-opacity-50 flex flex-col justify-between`}>
                       <div className="flex items-center gap-2 mb-1">
                         <span>{style.icon}</span>
-                        <span className={`text-xs font-semibold uppercase ${style.badge.split(' ')[1]}`}>{style.label}</span>
+                        <span className={`text-[10px] font-bold uppercase tracking-wider ${style.badge.split(' ')[1]}`}>{style.label}</span>
                       </div>
-                      <p className={`text-xl font-bold ${style.badge.split(' ')[1].replace('-800', '-900')}`}>
-                        ${subtotal.toFixed(2)}
+                      <p className={`text-xl font-bold mt-2 ${style.badge.split(' ')[1].replace('-800', '-900')}`}>
+                        C$ {subtotal.toFixed(2)}
                       </p>
                     </div>
                   );
@@ -175,9 +179,9 @@ const Facturacion = () => {
             )}
 
             {/* Total */}
-            <div className="pt-4 border-t flex justify-between items-center">
-              <p className="text-gray-600 font-medium">Total a Pagar</p>
-              <p className="text-3xl font-extrabold text-gray-900">${parseFloat(factura.total).toFixed(4)}</p>
+            <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center">
+              <p className="text-gray-600 dark:text-slate-400 font-bold">Total a Pagar</p>
+              <p className="text-3xl font-extrabold text-gray-900 dark:text-slate-100">C$ {parseFloat(factura.total).toFixed(4)}</p>
             </div>
 
             {/* Detalles por tramo */}
@@ -185,37 +189,37 @@ const Facturacion = () => {
               <div>
                 <button
                   onClick={() => setMostrarDetalles(v => !v)}
-                  className="text-sm text-primary-700 font-bold hover:underline flex items-center gap-1"
+                  className="text-sm text-indigo-600 dark:text-indigo-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   {mostrarDetalles ? '▲ Ocultar' : '▼ Ver'} desglose por tramo ({factura.detalles.length} líneas)
                 </button>
 
                 {mostrarDetalles && (
-                  <div className="mt-3 overflow-x-auto">
+                  <div className="mt-3 overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-xl">
                     <table className="w-full text-sm text-left">
-                      <thead className="bg-gray-50 border-b">
+                      <thead className="bg-slate-50 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800">
                         <tr>
-                          <th className="px-3 py-2 font-medium text-gray-600">Tramo</th>
-                          <th className="px-3 py-2 font-medium text-gray-600 text-right">Cantidad</th>
-                          <th className="px-3 py-2 font-medium text-gray-600 text-right">Días</th>
-                          <th className="px-3 py-2 font-medium text-gray-600 text-right">Tarifa/día</th>
-                          <th className="px-3 py-2 font-medium text-gray-600 text-right">Subtotal</th>
+                          <th className="px-4 py-3 font-semibold text-gray-600 dark:text-slate-400">Tramo</th>
+                          <th className="px-4 py-3 font-semibold text-gray-600 dark:text-slate-400 text-right">Cantidad</th>
+                          <th className="px-4 py-3 font-semibold text-gray-600 dark:text-slate-400 text-right">Días</th>
+                          <th className="px-4 py-3 font-semibold text-gray-600 dark:text-slate-400 text-right">Tarifa/día</th>
+                          <th className="px-4 py-3 font-semibold text-gray-600 dark:text-slate-400 text-right">Subtotal</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100">
+                      <tbody className="divide-y divide-gray-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
                         {factura.detalles.map((d, i) => {
-                          const style = TRAMO_STYLE[d.estado_tramo] || { badge: 'bg-gray-100 text-gray-700', icon: '📦' };
+                          const style = TRAMO_STYLE[d.estado_tramo] || { badge: 'bg-gray-100 text-gray-700', icon: '📦', label: d.estado_tramo };
                           return (
-                            <tr key={i} className="hover:bg-gray-50">
-                              <td className="px-3 py-2">
-                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${style.badge}`}>
-                                  {style.icon} {d.estado_tramo}
+                            <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/20">
+                              <td className="px-4 py-3">
+                                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${style.badge}`}>
+                                  {style.icon} {style.label}
                                 </span>
                               </td>
-                              <td className="px-3 py-2 text-right">{d.cantidad}</td>
-                              <td className="px-3 py-2 text-right">{d.dias}</td>
-                              <td className="px-3 py-2 text-right">${parseFloat(d.tarifa).toFixed(4)}</td>
-                              <td className="px-3 py-2 text-right font-medium">${parseFloat(d.subtotal).toFixed(2)}</td>
+                              <td className="px-4 py-3 text-right text-gray-700 dark:text-slate-300">{d.cantidad}</td>
+                              <td className="px-4 py-3 text-right text-gray-700 dark:text-slate-300">{d.dias}</td>
+                              <td className="px-4 py-3 text-right text-gray-700 dark:text-slate-300 font-mono">C$ {parseFloat(d.tarifa).toFixed(4)}</td>
+                              <td className="px-4 py-3 text-right font-bold text-gray-900 dark:text-slate-100">C$ {parseFloat(d.subtotal).toFixed(2)}</td>
                             </tr>
                           );
                         })}

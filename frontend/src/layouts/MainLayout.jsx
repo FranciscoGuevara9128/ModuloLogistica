@@ -16,7 +16,8 @@ import {
   ArrowLeftOnRectangleIcon,
   SunIcon,
   MoonIcon,
-  ArrowsUpDownIcon
+  ArrowsUpDownIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline';
 import { useTheme } from '../context/ThemeContext';
 
@@ -37,7 +38,7 @@ const MainLayout = () => {
       title: 'Operaciones',
       items: [
         { name: 'Entregas', href: '/entregas', icon: ClipboardDocumentCheckIcon, roles: ['ADMIN'] },
-        { name: 'Transporte', href: '/transporte', icon: TruckIcon, roles: ['ADMIN', 'CLIENTE_DIRECTO'] },
+        { name: 'Tránsito', href: '/transito', icon: TruckIcon, roles: ['ADMIN', 'CLIENTE_DIRECTO'] },
         { name: 'Devoluciones', href: '/devoluciones', icon: ArrowPathIcon, roles: ['ADMIN', 'CLIENTE_DIRECTO', 'CLIENTE_FINAL'] },
         { name: 'Transferencias', href: '/transferencias', icon: ArrowsRightLeftIcon, roles: ['ADMIN', 'CLIENTE_DIRECTO'] },
         { 
@@ -48,6 +49,7 @@ const MainLayout = () => {
           visible: (u) => u.role === 'ADMIN' || (u.role === 'CLIENTE_DIRECTO' && u.entityIds?.length > 1)
         },
         { name: 'Recepción', href: '/recepcion', icon: InboxArrowDownIcon, roles: ['ADMIN'] },
+        { name: 'Solicitudes', href: '/solicitudes', icon: DocumentTextIcon, roles: ['ADMIN', 'CLIENTE_DIRECTO'] },
       ]
     },
     { 
@@ -93,16 +95,7 @@ const MainLayout = () => {
             </button>
           </div>
 
-          {/* Theme Toggle */}
-          <div className="px-6 py-4 border-b border-slate-800">
-            <button 
-              onClick={toggleTheme}
-              className="flex items-center justify-between w-full text-slate-400 hover:text-white transition-colors"
-            >
-              {isSidebarOpen && <span className="text-xs font-semibold uppercase tracking-wider">Tema</span>}
-              {isDarkMode ? <SunIcon className="h-6 w-6 text-primary-400" /> : <MoonIcon className="h-6 w-6 text-slate-400" />}
-            </button>
-          </div>
+          {/* Theme Toggle ocultado temporalmente */}
 
           {/* Menú */}
           <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-8 scrollbar-hide">

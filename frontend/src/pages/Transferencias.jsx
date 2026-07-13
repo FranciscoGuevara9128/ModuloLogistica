@@ -51,7 +51,7 @@ const Transferencias = () => {
 
         const lotes_agrupados = Object.values(agrupados).map(g => ({
           ...g,
-          label: `[${g.estado_uso}] Cliente: ${g.cliente_nombre} | Cantidad: ${g.cantidad_restante} (${g.color_nombre})`
+          label: `[${g.estado_uso === 'ALMACENAMIENTO' ? 'Almacenamiento Temporal' : g.estado_uso}] Cliente: ${g.cliente_nombre} | Cantidad: ${g.cantidad_restante} (${g.color_nombre})`
         }));
 
         setReferencias({
@@ -107,8 +107,8 @@ const Transferencias = () => {
         fecha: ahora.toLocaleDateString(),
         hora: ahora.toLocaleTimeString(),
         cantidad: formData.cantidad,
-        origen: movSeleccionado.estado_uso,
-        destino: a_estado,
+        origen: movSeleccionado.estado_uso === 'ALMACENAMIENTO' ? 'Almacenamiento Temporal' : movSeleccionado.estado_uso,
+        destino: a_estado === 'ALMACENAMIENTO' ? 'Almacenamiento Temporal' : a_estado,
         usuario: user?.nombre || 'Representante',
         cliente: movSeleccionado.cliente_nombre,
         polin: movSeleccionado.tipo_nombre,
@@ -145,7 +145,7 @@ const Transferencias = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-950 dark:text-slate-100">Transferencia Interna</h1>
           <p className="text-gray-500 dark:text-slate-400 text-xs">
-            Mueve polines entre Almacenamiento y Pull Fijo para un mismo cliente.
+            Mueve polines entre Almacenamiento Temporal y Pull Fijo para un mismo cliente.
           </p>
         </div>
       </div>
@@ -190,9 +190,9 @@ const Transferencias = () => {
           <div className="space-y-4 animate-fadeIn">
             <div className="bg-slate-50 dark:bg-slate-950/40 p-4 rounded-xl border border-slate-200/60 dark:border-slate-800/50">
               <p className="text-sm text-gray-700 dark:text-slate-300 flex items-center justify-between">
-                <span>Categoría Origen: <strong className="text-violet-600 dark:text-violet-400">{movSeleccionado.estado_uso}</strong></span>
+                <span>Categoría Origen: <strong className="text-violet-600 dark:text-violet-400">{movSeleccionado.estado_uso === 'ALMACENAMIENTO' ? 'Almacenamiento Temporal' : 'Pull Fijo'}</strong></span>
                 <span className="text-gray-400">➜</span>
-                <span>Categoría Destino: <strong className="text-emerald-600 dark:text-emerald-400">{movSeleccionado.estado_uso === 'ALMACENAMIENTO' ? 'PULL_FIJO' : 'ALMACENAMIENTO'}</strong></span>
+                <span>Categoría Destino: <strong className="text-emerald-600 dark:text-emerald-400">{movSeleccionado.estado_uso === 'ALMACENAMIENTO' ? 'Pull Fijo' : 'Almacenamiento Temporal'}</strong></span>
               </p>
             </div>
 
@@ -265,8 +265,8 @@ const Transferencias = () => {
         >
           <div className="space-y-2.5 text-gray-750 dark:text-slate-300">
             <p><strong>Cliente:</strong> {movSeleccionado?.cliente_nombre}</p>
-            <p><strong>De:</strong> {movSeleccionado?.estado_uso}</p>
-            <p><strong>A:</strong> {movSeleccionado?.estado_uso === 'ALMACENAMIENTO' ? 'PULL_FIJO' : 'ALMACENAMIENTO'}</p>
+            <p><strong>De:</strong> {movSeleccionado?.estado_uso === 'ALMACENAMIENTO' ? 'Almacenamiento Temporal' : 'Pull Fijo'}</p>
+            <p><strong>A:</strong> {movSeleccionado?.estado_uso === 'ALMACENAMIENTO' ? 'Pull Fijo' : 'Almacenamiento Temporal'}</p>
             <p><strong>Polín:</strong> {movSeleccionado?.tipo_nombre} ({movSeleccionado?.color_nombre})</p>
             <p><strong>Cantidad:</strong> {formData.cantidad} unidades</p>
           </div>

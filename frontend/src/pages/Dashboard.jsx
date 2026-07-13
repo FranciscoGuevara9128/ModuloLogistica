@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getReferencias } from '../services/api';
+import { getReferencias, getHistorial } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 // Helper de zona horaria para interpretar fechas sin sufijo de timezone en UTC
@@ -16,6 +16,7 @@ const Dashboard = () => {
   const { user } = useAuth();
   const [movimientos, setMovimientos] = useState([]);
   const [clientesDirectos, setClientesDirectos] = useState([]);
+  const [historialReciente, setHistorialReciente] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -34,6 +35,11 @@ const Dashboard = () => {
           if (data.data.clientes_directos) {
             setClientesDirectos(data.data.clientes_directos);
           }
+        }
+
+        const histResp = await getHistorial();
+        if (histResp.data.success) {
+          setHistorialReciente(histResp.data.data.slice(0, 8)); // Mostramos los últimos 8
         }
       } catch (err) {
         setError('Error al obtener datos del dashboard.');
@@ -100,7 +106,7 @@ const Dashboard = () => {
   if (error) return <div className="text-red-500 p-4 text-center">{error}</div>;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <h1 className="text-2xl font-bold text-gray-800 dark:text-slate-100 border-b dark:border-slate-800 pb-2">
         Bienvenido, <span className="text-indigo-600 dark:text-primary-400">{user?.nombre || user?.entityName}</span>
         <span className="text-sm font-normal text-gray-500 dark:text-slate-400 ml-2">
@@ -146,11 +152,11 @@ const Dashboard = () => {
       {user?.role === 'ADMIN' && stats?.global && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
           <div className="bg-white dark:bg-slate-800 border dark:border-slate-700 text-center rounded-lg shadow-sm p-6 flex flex-col justify-center">
-            <h3 className="text-gray-500 dark:text-slate-400 text-sm font-medium uppercase tracking-wider">Total Almacenamiento</h3>
+            <h3 className="text-gray-500 dark:text-slate-400 text-sm font-medium uppercase tracking-wider">Total Almacenamiento Temporal</h3>
             <p className="text-4xl font-extrabold text-blue-600 dark:text-blue-400 mt-2">{stats.global.almacenamiento}</p>
           </div>
           <div className="bg-white dark:bg-slate-800 border dark:border-slate-700 text-center rounded-lg shadow-sm p-6 flex flex-col justify-center">
-            <h3 className="text-gray-500 dark:text-slate-400 text-sm font-medium uppercase tracking-wider">Total Transporte</h3>
+            <h3 className="text-gray-500 dark:text-slate-400 text-sm font-medium uppercase tracking-wider">Total Tránsito</h3>
             <p className="text-4xl font-extrabold text-amber-600 dark:text-amber-400 mt-2">{stats.global.transporte}</p>
           </div>
           <div className="bg-white dark:bg-slate-800 border dark:border-slate-700 text-center rounded-lg shadow-sm p-6 flex flex-col justify-center">
@@ -171,11 +177,11 @@ const Dashboard = () => {
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="bg-white dark:bg-slate-800 border-l-4 border-l-blue-500 rounded-lg shadow-sm p-5 hover:shadow-md transition">
-                  <h3 className="text-gray-500 dark:text-slate-400 text-xs font-bold uppercase">Almacenamiento</h3>
+                  <h3 className="text-gray-500 dark:text-slate-400 text-xs font-bold uppercase">Almacenamiento Temporal</h3>
                   <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{cliente.almacenamiento}</p>
                 </div>
                 <div className="bg-white dark:bg-slate-800 border-l-4 border-l-amber-500 rounded-lg shadow-sm p-5 hover:shadow-md transition">
-                  <h3 className="text-gray-500 dark:text-slate-400 text-xs font-bold uppercase">En Transporte</h3>
+                  <h3 className="text-gray-500 dark:text-slate-400 text-xs font-bold uppercase">En Tránsito</h3>
                   <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">{cliente.transporte}</p>
                 </div>
                 <div className="bg-white dark:bg-slate-800 border-l-4 border-l-indigo-500 rounded-lg shadow-sm p-5 hover:shadow-md transition">
@@ -225,6 +231,75 @@ const Dashboard = () => {
           )}
         </div>
       )}
+
+      {/* Historial General Reciente (Dashboard) */}
+      <section className="space-y-4">
+        <h2 className="text-xl font-bold text-gray-800 dark:text-slate-100 pb-2 border-b dark:border-slate-800">
+          Actividad Reciente (Movimientos Generales)
+        </h2>
+        {historialReciente.length === 0 ? (
+          <p className="text-gray-500 dark:text-slate-400 py-4">No hay movimientos recientes registrados.</p>
+        ) : (
+          <div className="overflow-hidden bg-white dark:bg-slate-900 shadow sm:rounded-xl border border-gray-200 dark:border-slate-800">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-800">
+              <thead className="bg-gray-50 dark:bg-slate-800/50">
+                <tr>
+                  <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Fecha y Hora</th>
+                  <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Cliente</th>
+                  <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Tipo de Movimiento</th>
+                  <th className="px-6 py-3.5 text-right text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Cantidad</th>
+                  <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Servicio</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-slate-800 bg-white dark:bg-slate-900">
+                {historialReciente.map((mov) => {
+                  const dateObj = parseUTCDate(mov.fecha_inicio);
+                  const displayType = (mov.tipo_movimiento === 'ENTREGA' && mov.estado_uso === 'TRANSPORTE') ? 'ENVIO' : mov.tipo_movimiento;
+                  const serviceLabel = mov.estado_uso === 'ALMACENAMIENTO' ? 'Almacenamiento Temporal' :
+                                       mov.estado_uso === 'TRANSPORTE' ? 'Tránsito' :
+                                       mov.estado_uso === 'PULL_FIJO' ? 'Pull Fijo' :
+                                       mov.estado_uso === 'SINIESTRO' ? 'Siniestro' : mov.estado_uso;
+
+                  return (
+                    <tr key={mov.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/30 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-slate-400">
+                        <div className="font-semibold text-gray-800 dark:text-slate-200">{dateObj.toLocaleDateString()}</div>
+                        <div className="text-[11px] text-gray-400 dark:text-slate-500 mt-0.5">
+                          {dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-slate-100">
+                        <div className="font-medium">{mov.cliente_directo?.nombre}</div>
+                        {mov.cliente_final && (
+                          <div className="text-xs text-blue-500 dark:text-blue-400 mt-0.5">Destino: {mov.cliente_final.nombre}</div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                          displayType === 'ENTREGA' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
+                          displayType === 'ENVIO' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' :
+                          displayType === 'TRANSFERENCIA' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' :
+                          displayType === 'TRASLADO' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' :
+                          displayType === 'DEVOLUCION' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' :
+                          'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300'
+                        }`}>
+                          {displayType}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-gray-900 dark:text-slate-100">
+                        {mov.cantidad}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-slate-400">
+                        {serviceLabel}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   );
 };

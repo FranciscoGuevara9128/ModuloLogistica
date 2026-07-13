@@ -11,6 +11,7 @@ import clientesRoutes from './routes/clientes.routes.js';
 import referenciasRoutes from './routes/referencias.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import gestionRoutes from './routes/gestion.routes.js';
+import solicitudesRoutes from './routes/solicitudes.routes.js';
 
 // ── Guardia de arranque: variables de entorno críticas ────────
 const missingVars = [];
@@ -26,7 +27,10 @@ if (missingVars.length > 0) {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : '*',
+  credentials: true
+}));
 app.use(express.json());
 
 app.use('/api', authRoutes);
@@ -35,6 +39,7 @@ app.use('/api/facturacion', facturacionRoutes);
 app.use('/api/gestion', gestionRoutes);
 app.use('/api/clientes', clientesRoutes);
 app.use('/api/referencias', referenciasRoutes);
+app.use('/api', solicitudesRoutes);
 
 app.get('/health', (req, res) => res.send('OK'));
 

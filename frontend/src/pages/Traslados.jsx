@@ -143,7 +143,7 @@ const Traslados = () => {
 
       setMensaje({ 
         tipo: 'success', 
-        texto: `Traslado realizado con éxito de ${clienteOrigenObj?.nombre} (${formData.de_estado}) a ${clienteDestinoObj?.nombre} (${formData.a_estado}).` 
+        texto: `Traslado realizado con éxito de ${clienteOrigenObj?.nombre} (${formData.de_estado === 'ALMACENAMIENTO' ? 'Almacenamiento Temporal' : formData.de_estado}) a ${clienteDestinoObj?.nombre} (${formData.a_estado === 'ALMACENAMIENTO' ? 'Almacenamiento Temporal' : formData.a_estado}).` 
       });
 
       // Generar PDF
@@ -154,8 +154,8 @@ const Traslados = () => {
         cantidad: formData.cantidad,
         cliente_origen: clienteOrigenObj?.nombre || 'Origen',
         cliente_destino: clienteDestinoObj?.nombre || 'Destino',
-        de_estado: formData.de_estado,
-        a_estado: formData.a_estado,
+        de_estado: formData.de_estado === 'ALMACENAMIENTO' ? 'Almacenamiento Temporal' : formData.de_estado,
+        a_estado: formData.a_estado === 'ALMACENAMIENTO' ? 'Almacenamiento Temporal' : formData.a_estado,
         usuario: user?.nombre || 'Usuario Autorizado',
         polin: itemSeleccionado.tipo_nombre,
         color: itemSeleccionado.color_nombre
@@ -269,7 +269,7 @@ const Traslados = () => {
                 value={formData.de_estado}
                 onChange={handleChange}
               >
-                <option value="ALMACENAMIENTO">Almacenamiento</option>
+                <option value="ALMACENAMIENTO">Almacenamiento Temporal</option>
                 <option value="PULL_FIJO">Pull Fijo</option>
               </select>
             </div>
@@ -279,7 +279,7 @@ const Traslados = () => {
           {formData.cliente_origen_id && (
             <div className="animate-fadeIn">
               <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">
-                Inventario Disponible en {formData.de_estado}
+                Inventario Disponible en {formData.de_estado === 'ALMACENAMIENTO' ? 'Almacenamiento Temporal' : formData.de_estado}
               </label>
               {inventarioDisponible.length === 0 ? (
                 <div className="p-3 text-sm bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900/30 text-yellow-800 dark:text-yellow-400 rounded-xl">
@@ -348,7 +348,7 @@ const Traslados = () => {
                   value={formData.a_estado}
                   onChange={handleChange}
                 >
-                  <option value="ALMACENAMIENTO">Almacenamiento</option>
+                  <option value="ALMACENAMIENTO">Almacenamiento Temporal</option>
                   <option value="PULL_FIJO">Pull Fijo</option>
                 </select>
               </div>

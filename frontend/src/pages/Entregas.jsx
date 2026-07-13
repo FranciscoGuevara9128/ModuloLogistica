@@ -123,7 +123,7 @@ const Entregas = () => {
               <select
                 name="tipo_polin_id"
                 required
-                className="w-full rounded-xl border-slate-300 dark:border-slate-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2.5 border bg-white dark:bg-slate-905 text-gray-900 dark:text-slate-100 transition-colors"
+                className="w-full rounded-xl border-slate-300 dark:border-slate-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2.5 border bg-white dark:bg-slate-950 text-gray-900 dark:text-slate-100 transition-colors"
                 value={formData.tipo_polin_id}
                 onChange={handleChange}
               >
@@ -140,7 +140,7 @@ const Entregas = () => {
               <select
                 name="color_polin_id"
                 required
-                className="w-full rounded-xl border-slate-300 dark:border-slate-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2.5 border bg-white dark:bg-slate-905 text-gray-900 dark:text-slate-100 transition-colors"
+                className="w-full rounded-xl border-slate-300 dark:border-slate-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2.5 border bg-white dark:bg-slate-950 text-gray-900 dark:text-slate-100 transition-colors"
                 value={formData.color_polin_id}
                 onChange={handleChange}
               >
@@ -178,12 +178,12 @@ const Entregas = () => {
               value={formData.estado_uso}
               onChange={handleChange}
             >
-              <option value="ALMACENAMIENTO">Almacenamiento</option>
+              <option value="ALMACENAMIENTO">Almacenamiento Temporal</option>
               <option value="PULL_FIJO">Pull Fijo</option>
             </select>
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-800 dark:text-slate-200 mb-1">Costo de Entrega ($)</label>
+            <label className="block text-sm font-semibold text-gray-800 dark:text-slate-200 mb-1">Costo de Entrega (C$)</label>
             <input
               type="number"
               name="costo_entrega"
@@ -210,7 +210,7 @@ const Entregas = () => {
                   type="text"
                   name="remision"
                   required
-                  className="w-full rounded-xl border-slate-300 dark:border-slate-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2.5 border bg-white dark:bg-slate-905 text-gray-900 dark:text-slate-100 transition-colors"
+                  className="w-full rounded-xl border-slate-300 dark:border-slate-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2.5 border bg-white dark:bg-slate-950 text-gray-900 dark:text-slate-100 transition-colors"
                   value={formData.remision}
                   onChange={handleChange}
                   placeholder="Ingrese la remisión"
@@ -223,7 +223,7 @@ const Entregas = () => {
                 <input
                   type="datetime-local"
                   name="fecha_manual"
-                  className="w-full rounded-xl border-slate-300 dark:border-slate-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2.5 border bg-white dark:bg-slate-905 text-gray-900 dark:text-slate-100 transition-colors"
+                  className="w-full rounded-xl border-slate-300 dark:border-slate-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2.5 border bg-white dark:bg-slate-950 text-gray-900 dark:text-slate-100 transition-colors"
                   value={formData.fecha_manual}
                   onChange={handleChange}
                 />
@@ -263,7 +263,7 @@ const Entregas = () => {
             <p><strong>Cliente:</strong> {referencias.clientes_directos?.find(c => c.id == formData.cliente_directo_id)?.nombre}</p>
             <p><strong>Polín:</strong> {referencias.tipos_polin?.find(t => t.id == formData.tipo_polin_id)?.nombre} ({referencias.colores_polin?.find(c => c.id == formData.color_polin_id)?.nombre})</p>
             <p><strong>Cantidad:</strong> {formData.cantidad}</p>
-            <p><strong>Modalidad:</strong> {formData.estado_uso}</p>
+            <p><strong>Modalidad:</strong> {formData.estado_uso === 'ALMACENAMIENTO' ? 'Almacenamiento Temporal' : 'Pull Fijo'}</p>
             {formData.remision && <p><strong>Remisión:</strong> {formData.remision}</p>}
           </div>
         </ConfirmModal>

@@ -197,4 +197,32 @@ export const trasladarInventario = async (req, res) => {
   }
 };
 
+export const editarTransaccion = async (req, res) => {
+  try {
+    const { rol: userRole } = req.user || {};
+    if (userRole !== 'ADMIN') {
+      throw new Error('No tiene permisos para editar transacciones.');
+    }
+    const { id } = req.params;
+    const result = await MovimientosService.editarTransaccion(id, req.body);
+    res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
+
+export const eliminarTransaccion = async (req, res) => {
+  try {
+    const { rol: userRole } = req.user || {};
+    if (userRole !== 'ADMIN') {
+      throw new Error('No tiene permisos para eliminar transacciones.');
+    }
+    const { id } = req.params;
+    const result = await MovimientosService.eliminarTransaccion(id);
+    res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+};
+
 
