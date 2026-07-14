@@ -1,5 +1,5 @@
 import express from 'express';
-import { registrarEntrega, enviarTransporte, liberarPolines, getRecepcionesPendientes, procesarRecepcion, getHistorial, transferenciaInterna, trasladarInventario } from '../controllers/movimientos.controller.js';
+import { registrarEntrega, enviarTransporte, liberarPolines, getRecepcionesPendientes, procesarRecepcion, getHistorial, transferenciaInterna, trasladarInventario, editarTransaccion, eliminarTransaccion } from '../controllers/movimientos.controller.js';
 import { verificarToken } from '../middleware/auth.middleware.js';
 import { validarEntrega, validarTransporte, validarLiberacion, validarRecepcion, validarTransferencia, validarTraslado } from '../middleware/validacion.middleware.js';
 
@@ -13,6 +13,8 @@ router.post('/recepcion',              verificarToken, validarRecepcion,     pro
 router.post('/movimientos/transferencia', verificarToken, validarTransferencia, transferenciaInterna);
 router.post('/movimientos/traslado',   verificarToken, validarTraslado,      trasladarInventario);
 router.get('/historial',               verificarToken,                       getHistorial);
+router.put('/movimientos/:id',         verificarToken,                       editarTransaccion);
+router.delete('/movimientos/:id',      verificarToken,                       eliminarTransaccion);
 
 export default router;
 

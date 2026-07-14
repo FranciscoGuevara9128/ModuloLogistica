@@ -56,7 +56,7 @@ const Devoluciones = () => {
 
         const lotes_agrupados = Object.values(agrupados).map(g => ({
           ...g,
-          label: `[${g.estado_uso}] Cliente: ${g.dueño_nombre} | Disponible: ${g.cantidad_restante} (${g.color_nombre})`
+          label: `[${g.estado_uso === 'ALMACENAMIENTO' ? 'Almacenamiento Temporal' : g.estado_uso === 'TRANSPORTE' ? 'Tránsito' : g.estado_uso}] Cliente: ${g.dueño_nombre} | Disponible: ${g.cantidad_restante} (${g.color_nombre})`
         }));
 
         setReferencias({ movimientos_activos: lotes_agrupados });
@@ -177,7 +177,7 @@ const Devoluciones = () => {
             {movSeleccionado && (
               <div className="mt-2.5 flex items-center gap-3">
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${BADGE[movSeleccionado.estado_uso] || 'bg-gray-100 text-gray-700'}`}>
-                  {movSeleccionado.estado_uso}
+                  {movSeleccionado.estado_uso === 'ALMACENAMIENTO' ? 'Almacenamiento Temporal' : movSeleccionado.estado_uso === 'TRANSPORTE' ? 'Tránsito' : movSeleccionado.estado_uso}
                 </span>
                 <span className="text-xs text-gray-500 dark:text-slate-400">
                   Disponibles totales: <strong>{movSeleccionado.cantidad_restante}</strong> unidades
@@ -263,7 +263,7 @@ const Devoluciones = () => {
           title="Confirmar Devolución de Polines"
         >
           <div className="space-y-2.5 text-gray-750 dark:text-slate-300">
-            <p><strong>Origen:</strong> {movSeleccionado?.dueño_nombre} ({movSeleccionado?.estado_uso})</p>
+            <p><strong>Origen:</strong> {movSeleccionado?.dueño_nombre} ({movSeleccionado?.estado_uso === 'ALMACENAMIENTO' ? 'Almacenamiento Temporal' : movSeleccionado?.estado_uso === 'TRANSPORTE' ? 'Tránsito' : movSeleccionado?.estado_uso})</p>
             <p><strong>Polín:</strong> {movSeleccionado?.tipo_nombre} ({movSeleccionado?.color_nombre})</p>
             <p><strong>Cantidad a Devolver:</strong> {formData.cantidad_liberar} unidades</p>
           </div>

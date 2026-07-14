@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getHistorial } from '../services/api';
+import { getHistorial, editarMovimiento, eliminarMovimiento } from '../services/api';
 import { jsPDF } from 'jspdf';
+import ConfirmModal from '../components/ConfirmModal';
 
 // Helper de zona horaria para interpretar fechas sin sufijo de timezone en UTC
 const parseUTCDate = (dateStr) => {
@@ -18,6 +19,7 @@ const Perfil = () => {
   const [historial, setHistorial] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
   // Estados de filtros
   const [filtroFechaInicio, setFiltroFechaInicio] = useState('');
@@ -26,21 +28,33 @@ const Perfil = () => {
   const [filtroTipo, setFiltroTipo] = useState('');
   const [listaClientesDirectos, setListaClientesDirectos] = useState([]);
 
-  useEffect(() => {
-    const fetchHistorial = async () => {
-      try {
-        const { data } = await getHistorial();
-        if (data.success) {
-          setHistorial(data.data);
-        }
-      } catch (err) {
-        setError('Error al cargar el historial de pedidos.');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Estados de Edición y Eliminación
+  const [editingMov, setEditingMov] = useState(null);
+  const [deletingMov, setDeletingMov] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    cantidad: '',
+    cantidad_buenos: '',
+    cantidad_siniestrados: '',
+    fecha_inicio: '',
+    remision: '',
+    orden_compra: ''
+  });
 
+  const fetchHistorial = async () => {
+    try {
+      const { data } = await getHistorial();
+      if (data.success) {
+        setHistorial(data.data);
+      }
+    } catch (err) {
+      setError('Error al cargar el historial de pedidos.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchHistorial();
   }, []);
 
@@ -66,28 +80,24 @@ const Perfil = () => {
 
   // Aplicar filtros en memoria
   const filteredHistorial = historial.filter(mov => {
-    // 1. Filtro por Fecha Inicio (Desde)
     if (filtroFechaInicio) {
       const movDate = parseUTCDate(mov.fecha_inicio);
       const startDate = new Date(filtroFechaInicio + 'T00:00:00');
       if (movDate < startDate) return false;
     }
 
-    // 2. Filtro por Fecha Fin (Hasta)
     if (filtroFechaFin) {
       const movDate = parseUTCDate(mov.fecha_inicio);
       const endDate = new Date(filtroFechaFin + 'T23:59:59');
       if (movDate > endDate) return false;
     }
 
-    // 3. Filtro por Cliente Directo
     if (filtroCliente) {
       const isOrigen = mov.cliente_origen?.id === filtroCliente;
       const isDestino = mov.cliente_directo?.id === filtroCliente;
       if (!isOrigen && !isDestino) return false;
     }
 
-    // 4. Filtro por Tipo de Movimiento
     if (filtroTipo) {
       const displayType = (mov.tipo_movimiento === 'ENTREGA' && mov.estado_uso === 'TRANSPORTE') 
         ? 'ENVIO' 
@@ -99,7 +109,75 @@ const Perfil = () => {
     return true;
   });
 
-  // Función para descargar PDF elegante (formato recibo A5)
+  const handleDeleteClick = (mov) => {
+    setDeletingMov(mov);
+  };
+
+  const handleConfirmDelete = async () => {
+    setError('');
+    setSuccessMsg('');
+    try {
+      const { data } = await eliminarMovimiento(deletingMov.id);
+      if (data.success) {
+        setSuccessMsg('Movimiento eliminado correctamente.');
+        fetchHistorial();
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || err.message);
+    } finally {
+      setDeletingMov(null);
+    }
+  };
+
+  const handleEditClick = (mov) => {
+    setEditingMov(mov);
+    // Convertir ISO string a datetime-local format
+    const localDate = parseUTCDate(mov.fecha_inicio).toISOString().slice(0, 16);
+    
+    setEditFormData({
+      cantidad: mov.cantidad || '',
+      cantidad_buenos: mov.cantidad_buenos || mov.cantidad || '',
+      cantidad_siniestrados: mov.cantidad_siniestrados || 0,
+      fecha_inicio: localDate,
+      remision: mov.remision || '',
+      orden_compra: mov.orden_compra || ''
+    });
+  };
+
+  const handleEditFormChange = (e) => {
+    setEditFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleConfirmEdit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccessMsg('');
+    try {
+      const isDev = editingMov.id.toString().startsWith('dev-');
+      const payload = {
+        fecha_inicio: editFormData.fecha_inicio,
+        remision: editFormData.remision,
+        orden_compra: editFormData.orden_compra
+      };
+
+      if (isDev && editingMov.estado_uso === 'RECIBIDO') {
+        payload.cantidad_buenos = parseInt(editFormData.cantidad_buenos, 10);
+        payload.cantidad_siniestrados = parseInt(editFormData.cantidad_siniestrados, 10);
+      } else {
+        payload.cantidad = parseInt(editFormData.cantidad, 10);
+      }
+
+      const { data } = await editarMovimiento(editingMov.id, payload);
+      if (data.success) {
+        setSuccessMsg('Movimiento editado correctamente.');
+        setEditingMov(null);
+        fetchHistorial();
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || err.message);
+    }
+  };
+
   const downloadPDF = (mov) => {
     const doc = new jsPDF({
       orientation: 'portrait',
@@ -107,8 +185,7 @@ const Perfil = () => {
       format: 'a5'
     });
 
-    // Banner Superior Elegante
-    doc.setFillColor(31, 41, 55); // Gris oscuro premium
+    doc.setFillColor(31, 41, 55);
     doc.rect(0, 0, 148, 18, 'F');
     
     doc.setTextColor(255, 255, 255);
@@ -116,13 +193,11 @@ const Perfil = () => {
     doc.setFontSize(12);
     doc.text('SISTEMA DE POLINES', 10, 11);
     
-    // Insignia de Comprobante
-    doc.setFillColor(34, 197, 94); // Verde primary
+    doc.setFillColor(34, 197, 94);
     doc.rect(98, 5, 40, 8, 'F');
     doc.setFontSize(8);
-    doc.text('COMPROBANTE', 104, 10.5); // Ajuste fino vertical
+    doc.text('COMPROBANTE', 104, 10.5);
     
-    // Título Principal
     doc.setTextColor(50, 50, 50);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(13);
@@ -137,7 +212,6 @@ const Perfil = () => {
     doc.text(`ID Movimiento: ${mov.id.toString().substring(0, 8).toUpperCase()}`, 10, 36);
     doc.text(`Fecha y Hora: ${dateStr} - ${timeStr}`, 10, 41);
     
-    // Línea divisoria
     doc.setDrawColor(220, 220, 220);
     doc.line(10, 45, 138, 45);
     
@@ -156,11 +230,10 @@ const Perfil = () => {
       ? 'ENVIO' 
       : mov.tipo_movimiento;
 
-    addRow('Tipo Movimiento:', displayType);
+    addRow('Tipo Movimiento:', displayType === 'ENVIO' ? 'ENVÍO' : displayType);
     addRow('Tipo de Polín:', mov.tipo_polin?.nombre || '-');
     addRow('Color de Polín:', mov.color_polin?.nombre || '-');
     
-    // Cantidad destacada en verde
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(80, 80, 80);
     doc.text('Cantidad:', 10, y);
@@ -192,7 +265,6 @@ const Perfil = () => {
       addRow('Orden de Compra:', mov.orden_compra);
     }
     
-    // Firmas al pie de página
     doc.setDrawColor(220, 220, 220);
     doc.line(10, 160, 138, 160);
     
@@ -215,7 +287,7 @@ const Perfil = () => {
   if (loading) return <div className="text-center py-10 text-gray-500 dark:text-slate-400">Cargando perfil...</div>;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="max-w-6xl mx-auto space-y-8">
       <header className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 flex items-center space-x-6">
         <div className="h-20 w-20 bg-primary-500 rounded-full flex items-center justify-center text-black text-3xl font-bold shadow-inner flex-shrink-0">
           {user?.nombre?.charAt(0) || user?.entityName?.charAt(0)}
@@ -233,6 +305,7 @@ const Perfil = () => {
         <h2 className="text-xl font-bold text-gray-800 dark:text-slate-100 mb-2 border-b dark:border-slate-700 pb-2">Historial de Pedidos / Movimientos</h2>
         
         {error && <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-lg border border-red-200 dark:border-red-800">{error}</div>}
+        {successMsg && <div className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 p-4 rounded-lg border border-emerald-200 dark:border-emerald-850">{successMsg}</div>}
 
         {/* Panel de Filtros */}
         <div className="bg-white dark:bg-slate-800 p-5 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 space-y-4">
@@ -286,7 +359,7 @@ const Perfil = () => {
               >
                 <option value="">Todos los tipos</option>
                 <option value="ENTREGA">ENTREGA</option>
-                <option value="ENVIO">ENVIO</option>
+                <option value="ENVIO">ENVÍO</option>
                 <option value="TRASLADO">TRASLADO</option>
                 <option value="TRANSFERENCIA">TRANSFERENCIA (Interna)</option>
                 <option value="DEVOLUCION">DEVOLUCION</option>
@@ -333,6 +406,13 @@ const Perfil = () => {
                   const dateObj = parseUTCDate(mov.fecha_inicio);
                   const displayType = (mov.tipo_movimiento === 'ENTREGA' && mov.estado_uso === 'TRANSPORTE') ? 'ENVIO' : mov.tipo_movimiento;
                   
+                  let labelTipo = displayType;
+                  if (displayType === 'ENTREGA') {
+                    labelTipo = `ENTREGA (${mov.estado_uso === 'PULL_FIJO' ? 'Pull Fijo' : 'Almacenamiento Temporal'})`;
+                  } else if (displayType === 'ENVIO') {
+                    labelTipo = 'ENVÍO';
+                  }
+
                   return (
                     <tr key={mov.id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-slate-400">
@@ -353,10 +433,10 @@ const Perfil = () => {
                         ) : (
                           <>
                             {user?.role !== 'CLIENTE_FINAL' && mov.cliente_final && (
-                              <div className="text-xs text-blue-500 dark:text-blue-400 mt-1">Destino: {mov.cliente_final.nombre}</div>
+                              <div className="text-xs text-blue-500 dark:text-blue-400 mt-1 font-semibold">Destino: {mov.cliente_final.nombre}</div>
                             )}
                             {user?.role !== 'CLIENTE_DIRECTO' && mov.cliente_directo && (
-                              <div className="text-xs text-amber-600 dark:text-amber-400 mt-1">Origen: {mov.cliente_directo.nombre}</div>
+                              <div className="text-xs text-amber-600 dark:text-amber-400 mt-1 font-semibold">Origen: {mov.cliente_directo.nombre}</div>
                             )}
                           </>
                         )}
@@ -377,23 +457,38 @@ const Perfil = () => {
                           displayType === 'DEVOLUCION' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' :
                           'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300'
                         }`}>
-                          {displayType}
+                          {labelTipo}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-gray-900 dark:text-slate-100">
                         {mov.cantidad}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                         <button
                           onClick={() => downloadPDF(mov)}
-                          className="inline-flex items-center space-x-1 text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-300 font-bold bg-primary-50 dark:bg-primary-900/10 hover:bg-primary-100 dark:hover:bg-primary-900/20 px-2.5 py-1.5 rounded-lg transition-colors border border-primary-100 dark:border-primary-900/25"
+                          className="inline-flex items-center space-x-1 text-primary-600 hover:text-primary-900 dark:text-primary-400 dark:hover:text-primary-300 font-bold bg-primary-50 dark:bg-primary-900/10 hover:bg-primary-100 dark:hover:bg-primary-900/20 px-2 py-1 rounded-lg border border-primary-100 dark:border-primary-900/25 transition-colors"
                           title="Descargar Comprobante PDF"
                         >
-                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                          <span>PDF</span>
+                          PDF
                         </button>
+                        {user?.role === 'ADMIN' && (
+                          <>
+                            <button
+                              onClick={() => handleEditClick(mov)}
+                              className="inline-flex items-center px-2 py-1 bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800/40 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-950/30 transition-colors font-bold cursor-pointer"
+                              title="Editar movimiento"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              onClick={() => handleDeleteClick(mov)}
+                              className="inline-flex items-center px-2 py-1 bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800/40 rounded-lg hover:bg-red-100 dark:hover:bg-red-950/30 transition-colors font-bold cursor-pointer"
+                              title="Eliminar movimiento"
+                            >
+                              Eliminar
+                            </button>
+                          </>
+                        )}
                       </td>
                     </tr>
                   );
@@ -403,6 +498,137 @@ const Perfil = () => {
           </div>
         )}
       </section>
+
+      {/* Modal de Confirmación de Eliminación */}
+      {deletingMov && (
+        <ConfirmModal
+          isOpen={!!deletingMov}
+          onClose={() => setDeletingMov(null)}
+          onConfirm={handleConfirmDelete}
+          title="¿Confirmar Eliminación?"
+        >
+          <div className="space-y-2 text-gray-700 dark:text-slate-350 text-sm">
+            <p className="text-red-600 dark:text-red-400 font-bold">Atención: Esta acción es irreversible.</p>
+            <p>Se restaurará la cantidad de polines al inventario origen para mantener la consistencia.</p>
+            <p><strong>Tipo:</strong> {deletingMov.tipo_movimiento}</p>
+            <p><strong>Cantidad:</strong> {deletingMov.cantidad} polines</p>
+            {deletingMov.cliente_directo && <p><strong>Cliente:</strong> {deletingMov.cliente_directo.nombre}</p>}
+          </div>
+        </ConfirmModal>
+      )}
+
+      {/* Modal de Edición de Movimiento */}
+      {editingMov && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 animate-scaleUp">
+            <div className="flex justify-between items-center pb-2 border-b dark:border-slate-800">
+              <h3 className="text-lg font-bold text-gray-950 dark:text-slate-100">Editar Transacción</h3>
+              <button onClick={() => setEditingMov(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-200 text-lg">✕</button>
+            </div>
+            
+            <form onSubmit={handleConfirmEdit} className="space-y-4">
+              
+              {editingMov.id.toString().startsWith('dev-') && editingMov.estado_uso === 'RECIBIDO' ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Buenos</label>
+                    <input
+                      type="number"
+                      name="cantidad_buenos"
+                      required
+                      min="0"
+                      value={editFormData.cantidad_buenos}
+                      onChange={handleEditFormChange}
+                      className="w-full text-sm bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-700 rounded-lg p-2.5 text-gray-900 dark:text-slate-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Siniestrados</label>
+                    <input
+                      type="number"
+                      name="cantidad_siniestrados"
+                      required
+                      min="0"
+                      value={editFormData.cantidad_siniestrados}
+                      onChange={handleEditFormChange}
+                      className="w-full text-sm bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-700 rounded-lg p-2.5 text-gray-900 dark:text-slate-100"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Cantidad de Polines</label>
+                  <input
+                    type="number"
+                    name="cantidad"
+                    required
+                    min="1"
+                    value={editFormData.cantidad}
+                    onChange={handleEditFormChange}
+                    className="w-full text-sm bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-700 rounded-lg p-2.5 text-gray-900 dark:text-slate-100"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Fecha y Hora</label>
+                <input
+                  type="datetime-local"
+                  name="fecha_inicio"
+                  required
+                  value={editFormData.fecha_inicio}
+                  onChange={handleEditFormChange}
+                  className="w-full text-sm bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-700 rounded-lg p-2.5 text-gray-900 dark:text-slate-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">N° Remisión</label>
+                <input
+                  type="text"
+                  name="remision"
+                  value={editFormData.remision}
+                  onChange={handleEditFormChange}
+                  placeholder="Sin número de remisión"
+                  className="w-full text-sm bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-700 rounded-lg p-2.5 text-gray-900 dark:text-slate-100"
+                />
+              </div>
+
+              {!editingMov.id.toString().startsWith('dev-') && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">Orden de Compra (OC)</label>
+                  <input
+                    type="text"
+                    name="orden_compra"
+                    value={editFormData.orden_compra}
+                    onChange={handleEditFormChange}
+                    placeholder="Sin orden de compra"
+                    className="w-full text-sm bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-700 rounded-lg p-2.5 text-gray-900 dark:text-slate-100"
+                  />
+                </div>
+              )}
+
+              <div className="pt-4 flex space-x-3 justify-end border-t dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setEditingMov(null)}
+                  className="px-4 py-2 border border-gray-200 dark:border-slate-750 text-sm font-semibold rounded-lg text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-800"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-sm font-semibold text-white rounded-lg cursor-pointer"
+                >
+                  Guardar Cambios
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

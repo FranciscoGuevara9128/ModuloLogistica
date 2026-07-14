@@ -3,20 +3,12 @@ import { createContext, useContext, useEffect, useState } from 'react';
 const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const saved = localStorage.getItem('polines_theme');
-    return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  });
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('polines_theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('polines_theme', 'light');
-    }
-  }, [isDarkMode]);
+    // Forzado temporal a modo claro por problemas de legibilidad
+    document.documentElement.classList.remove('dark');
+  }, []);
 
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 

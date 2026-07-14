@@ -1,12 +1,13 @@
 import express from 'express';
 import * as GestionController from '../controllers/gestion.controller.js';
-import { verificarToken } from '../middleware/auth.middleware.js';
+import { verificarToken, verificarAdmin } from '../middleware/auth.middleware.js';
 import { validarClienteDirecto, validarClienteFinal, validarUsuario } from '../middleware/validacion.middleware.js';
 
 const router = express.Router();
 
 // Middleware de protección global para estas rutas
 router.use(verificarToken);
+router.use(verificarAdmin);
 
 // Clientes Directos
 router.get('/clientes-directos',       GestionController.getClientesDirectos);

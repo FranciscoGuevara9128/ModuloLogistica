@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { enviarTransporte, getReferencias } from '../services/api';
+import { enviarTransito, getReferencias } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import ConfirmModal from '../components/ConfirmModal';
 
-const Transporte = () => {
+const Transito = () => {
   const [formData, setFormData] = useState({
     grupo_origen: '',
     cliente_final_id: '',
@@ -89,7 +89,7 @@ const Transporte = () => {
     setMensaje({ tipo: '', texto: '' });
     setLoading(true);
     try {
-      const result = await enviarTransporte({
+      const result = await enviarTransito({
         cliente_directo_id: movSeleccionado.cliente_directo_id,
         tipo_polin_id: movSeleccionado.tipo_polin_id,
         color_polin_id: movSeleccionado.color_polin_id,
@@ -101,8 +101,8 @@ const Transporte = () => {
       const origen_cerrado = restante_en_origen === 0;
 
       const msg = origen_cerrado
-        ? 'Inventario completo enviado a transporte correctamente.'
-        : `Envío parcial registrado. Quedan ${restante_en_origen} unidades en almacenamiento / pull fijo para este grupo.`;
+        ? 'Inventario completo enviado a tránsito correctamente.'
+        : `Envío parcial registrado. Quedan ${restante_en_origen} unidades en almacenamiento temporal / pull fijo para este grupo.`;
 
       setMensaje({ tipo: 'success', texto: msg });
       setFormData({ grupo_origen: '', cliente_final_id: '', cantidad_enviada: '', fecha_manual: '', orden_compra: '' });
@@ -111,7 +111,7 @@ const Transporte = () => {
       // Actualizar referencias
       fetchReferencias();
     } catch (err) {
-      setMensaje({ tipo: 'error', texto: 'Error al enviar a transporte. ' + (err.response?.data?.error || err.message) });
+      setMensaje({ tipo: 'error', texto: 'Error al enviar a tránsito. ' + (err.response?.data?.error || err.message) });
     } finally {
       setLoading(false);
     }
@@ -135,9 +135,9 @@ const Transporte = () => {
           </svg>
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-950 dark:text-slate-100">Enviar a Cliente Final</h1>
+          <h1 className="text-2xl font-bold text-gray-950 dark:text-slate-100">Enviar a Cliente Final (Tránsito)</h1>
           <p className="text-gray-500 dark:text-slate-400 text-xs">
-            Envía polines directamente desde el almacén o pull fijo hacia un cliente final.
+            Envía polines directamente desde el almacenamiento temporal o pull fijo hacia un cliente final.
           </p>
         </div>
       </div>
@@ -160,7 +160,7 @@ const Transporte = () => {
           
           <div>
             <label className="block text-xs font-semibold text-gray-700 dark:text-slate-300 mb-1">
-              Inventario en Almacenamiento / Pull Fijo a Enviar
+              Inventario en Almacenamiento Temporal / Pull Fijo a Enviar
             </label>
             <select
               name="grupo_origen"
@@ -171,7 +171,7 @@ const Transporte = () => {
             >
               <option value="">-- Seleccione el Inventario Disponible --</option>
               {referencias.movimientos_activos.map(mov => (
-                <option key={mov.id} value={mov.id}>{mov.label}</option>
+                <option key={mov.id} value={mov.id}>{mov.label.replace('ALMACENAMIENTO', 'ALMACENAMIENTO TEMPORAL')}</option>
               ))}
             </select>
             {movSeleccionado && (
@@ -243,7 +243,7 @@ const Transporte = () => {
                   <input
                     type="text"
                     name="orden_compra"
-                    className="w-full rounded-xl border-slate-300 dark:border-slate-700 shadow-sm focus:border-amber-500 focus:ring-amber-500 p-2.5 border bg-white dark:bg-slate-905 text-gray-900 dark:text-slate-100 transition-colors"
+                    className="w-full rounded-xl border-slate-300 dark:border-slate-700 shadow-sm focus:border-amber-500 focus:ring-amber-500 p-2.5 border bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 transition-colors"
                     value={formData.orden_compra}
                     onChange={handleChange}
                     placeholder="Ingrese la Orden de Compra"
@@ -258,7 +258,7 @@ const Transporte = () => {
                     <input
                       type="datetime-local"
                       name="fecha_manual"
-                      className="w-full rounded-xl border-slate-300 dark:border-slate-700 shadow-sm focus:border-amber-500 focus:ring-amber-500 p-2.5 border bg-white dark:bg-slate-905 text-gray-900 dark:text-slate-100 transition-colors"
+                      className="w-full rounded-xl border-slate-300 dark:border-slate-700 shadow-sm focus:border-amber-500 focus:ring-amber-500 p-2.5 border bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 transition-colors"
                       value={formData.fecha_manual}
                       onChange={handleChange}
                     />
@@ -280,7 +280,7 @@ const Transporte = () => {
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
                     </svg>
-                    <span>Enviar a Transporte</span>
+                    <span>Enviar a Tránsito</span>
                   </>
                 )}
               </button>
@@ -294,9 +294,9 @@ const Transporte = () => {
           isOpen={showConfirm}
           onClose={() => setShowConfirm(false)}
           onConfirm={handleConfirmSubmit}
-          title="Confirmar Envío a Transporte"
+          title="Confirmar Envío a Tránsito"
         >
-          <div className="space-y-2.5 text-gray-750 dark:text-slate-300">
+          <div className="space-y-2.5 text-gray-700 dark:text-slate-300">
             <p><strong>Origen:</strong> {movSeleccionado?.cliente_nombre}</p>
             <p><strong>Destino:</strong> {referencias.clientes_finales?.find(c => c.id == formData.cliente_final_id)?.nombre}</p>
             <p><strong>Polín:</strong> {movSeleccionado?.tipo_nombre} ({movSeleccionado?.color_nombre})</p>
@@ -309,4 +309,4 @@ const Transporte = () => {
   );
 };
 
-export default Transporte;
+export default Transito;

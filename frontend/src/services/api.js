@@ -31,7 +31,7 @@ export const loginUser = (credentials) => api.post('/login', credentials);
 export const getReferencias = () => api.get('/referencias');
 export const getPolinesCliente = (clienteId) => api.get(`/clientes/${clienteId}/polines`);
 export const registrarEntrega = (data) => api.post('/entregas', data);
-export const enviarTransporte = (data) => api.post('/movimientos/transporte', data);
+export const enviarTransito = (data) => api.post('/movimientos/transporte', data);
 export const liberarPolines = (data) => api.post('/movimientos/liberacion', data);
 export const realizarTransferencia = (data) => api.post('/movimientos/transferencia', data);
 export const realizarTraslado = (data) => api.post('/movimientos/traslado', data);
@@ -39,6 +39,11 @@ export const generarFacturacion = (data) => api.post('/facturacion/generar', dat
 export const getRecepcionesPendientes = () => api.get('/recepciones/pendientes');
 export const procesarRecepcion = (data) => api.post('/recepcion', data);
 export const getHistorial = () => api.get('/historial');
+export const editarMovimiento = (id, data) => api.put(`/movimientos/${id}`, data);
+export const eliminarMovimiento = (id) => api.delete(`/movimientos/${id}`);
+export const getSolicitudes = () => api.get('/solicitudes');
+export const createSolicitud = (data) => api.post('/solicitudes', data);
+export const responderSolicitud = (id, estado) => api.put(`/solicitudes/${id}/estado`, { estado });
 
 // GESTION
 export const getGestionClientesDirectos = () => api.get('/gestion/clientes-directos');

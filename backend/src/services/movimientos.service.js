@@ -318,7 +318,7 @@ export const procesarRecepcion = async ({ recepcion_id, cantidad_buenos, cantida
 
   const { data: rec, error: getErr } = await supabase
     .from('recepcion_polines')
-    .select(`*, movimiento_polines(tipo_polin_id, color_polin_id)`)
+    .select(`*, movimiento_polines(tipo_polin_id, color_polin_id, cliente_directo_id)`)
     .eq('id', recepcion_id)
     .single();
 
@@ -577,6 +577,404 @@ export const trasladarInventario = async ({
   }
 
   return nuevosMovimientos;
+};
+
+// ─────────────────────────────────────────────────────────────
+// ELIMINAR TRANSACCION (Consistente)
+// ─────────────────────────────────────────────────────────────
+export const eliminarTransaccion = async (id) => {
+  if (id.startsWith('dev-')) {
+    const recId = id.replace('dev-', '');
+    const { data: rec, error: getErr } = await supabase
+      .from('recepcion_polines')
+      .select('*, movimiento_polines(*)')
+      .eq('id', recId)
+      .single();
+    if (getErr) throw new Error(getErr.message);
+
+    if (rec.estado_recepcion === 'RECIBIDO') {
+      const parent = rec.movimiento_polines;
+      
+      // Revertir el inventario sumado si fue mayor a 0
+      if (rec.cantidad_buenos > 0) {
+        const { data: inv } = await supabase
+          .from('inventario')
+          .select('*')
+          .eq('tipo_polin_id', parent.tipo_polin_id)
+          .eq('color_polin_id', parent.color_polin_id)
+          .single();
+        if (inv) {
+          await supabase
+            .from('inventario')
+            .update({ cantidad_disponible: inv.cantidad_disponible - rec.cantidad_buenos })
+            .eq('id', inv.id);
+        }
+      }
+
+      // Eliminar movimientos de tipo DEVOLUCION / SINIESTRO creados
+      await supabase
+        .from('movimiento_polines')
+        .delete()
+        .eq('movimiento_origen_id', rec.movimiento_origen_id)
+        .in('tipo_movimiento', ['DEVOLUCION', 'SINIESTRO']);
+    }
+
+    // Revertir parent's cantidad_restante
+    const { data: parent } = await supabase
+      .from('movimiento_polines')
+      .select('*')
+      .eq('id', rec.movimiento_origen_id)
+      .single();
+    
+    if (parent) {
+      await supabase
+        .from('movimiento_polines')
+        .update({ cantidad_restante: parent.cantidad_restante + rec.cantidad_liberada, fecha_fin: null })
+        .eq('id', parent.id);
+    }
+
+    // Eliminar recepcion_polines
+    const { error: delErr } = await supabase.from('recepcion_polines').delete().eq('id', recId);
+    if (delErr) throw new Error(delErr.message);
+
+    return { success: true };
+  } else {
+    // Si es un movimiento de tipo DEVOLUCION o SINIESTRO en la tabla movimiento_polines
+    const { data: mov } = await supabase.from('movimiento_polines').select('*').eq('id', id).single();
+    if (mov && ['DEVOLUCION', 'SINIESTRO'].includes(mov.tipo_movimiento)) {
+      // Buscar la recepción correspondiente por movimiento_origen_id
+      const { data: rec } = await supabase
+        .from('recepcion_polines')
+        .select('*')
+        .eq('movimiento_origen_id', mov.movimiento_origen_id)
+        .eq('estado_recepcion', 'RECIBIDO')
+        .limit(1);
+      if (rec && rec.length > 0) {
+        // Ejecutar eliminación sobre la recepción que lo contiene
+        return eliminarTransaccion(`dev-${rec[0].id}`);
+      }
+    }
+
+    // Movimiento regular
+    const { data: currentMov, error: getErr } = await supabase.from('movimiento_polines').select('*').eq('id', id).single();
+    if (getErr) throw new Error(getErr.message);
+
+    // Verificar si es padre de otros movimientos
+    const { data: childMovs } = await supabase.from('movimiento_polines').select('id').eq('movimiento_origen_id', id).limit(1);
+    if (childMovs && childMovs.length > 0) {
+      throw new Error('No se puede eliminar: Este lote es origen de otros movimientos o traslados.');
+    }
+    
+    // Verificar si tiene recepciones asociadas
+    const { data: childRecs } = await supabase.from('recepcion_polines').select('id').eq('movimiento_origen_id', id).limit(1);
+    if (childRecs && childRecs.length > 0) {
+      throw new Error('No se puede eliminar: Este lote tiene liberaciones o recepciones pendientes.');
+    }
+
+    // Revertir inventario o lote padre
+    if (!currentMov.movimiento_origen_id) {
+      // Devolver a inventario
+      const { data: inv } = await supabase
+        .from('inventario')
+        .select('*')
+        .eq('tipo_polin_id', currentMov.tipo_polin_id)
+        .eq('color_polin_id', currentMov.color_polin_id)
+        .single();
+      if (inv) {
+        await supabase
+          .from('inventario')
+          .update({ cantidad_disponible: inv.cantidad_disponible + currentMov.cantidad })
+          .eq('id', inv.id);
+      }
+    } else {
+      // Devolver a lote padre
+      const { data: parent } = await supabase.from('movimiento_polines').select('*').eq('id', currentMov.movimiento_origen_id).single();
+      if (parent) {
+        await supabase
+          .from('movimiento_polines')
+          .update({ cantidad_restante: parent.cantidad_restante + currentMov.cantidad, fecha_fin: null })
+          .eq('id', parent.id);
+      }
+    }
+
+    const { error: delErr } = await supabase.from('movimiento_polines').delete().eq('id', id);
+    if (delErr) throw new Error(delErr.message);
+
+    return { success: true };
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// EDITAR TRANSACCION (Consistente)
+// ─────────────────────────────────────────────────────────────
+export const editarTransaccion = async (id, { cantidad, fecha_inicio, remision, orden_compra, cantidad_buenos, cantidad_siniestrados }) => {
+  if (id.startsWith('dev-')) {
+    const recId = id.replace('dev-', '');
+    const { data: rec, error: getErr } = await supabase
+      .from('recepcion_polines')
+      .select('*, movimiento_polines(*)')
+      .eq('id', recId)
+      .single();
+    if (getErr) throw new Error(getErr.message);
+
+    const parent = rec.movimiento_polines;
+
+    if (rec.estado_recepcion === 'PENDIENTE') {
+      const delta = cantidad - rec.cantidad_liberada;
+      if (delta > 0 && parent.cantidad_restante < delta) {
+        throw new Error('El lote origen no tiene suficientes polines disponibles para esta ampliación.');
+      }
+
+      // Actualizar parent
+      await supabase
+        .from('movimiento_polines')
+        .update({
+          cantidad_restante: parent.cantidad_restante - delta,
+          fecha_fin: (parent.cantidad_restante - delta) === 0 ? new Date(fecha_inicio).toISOString() : null
+        })
+        .eq('id', parent.id);
+
+      // Actualizar recepción
+      const { error: updErr } = await supabase
+        .from('recepcion_polines')
+        .update({
+          cantidad_liberada: cantidad,
+          fecha_liberacion: new Date(fecha_inicio).toISOString(),
+          remision
+        })
+        .eq('id', recId);
+      if (updErr) throw new Error(updErr.message);
+
+    } else if (rec.estado_recepcion === 'RECIBIDO') {
+      // El total editado se define por la suma de buenos y siniestrados editados
+      const cBuenos = parseInt(cantidad_buenos, 10);
+      const cSiniestrados = parseInt(cantidad_siniestrados, 10);
+      const newTotal = cBuenos + cSiniestrados;
+
+      const deltaTotal = newTotal - rec.cantidad_liberada;
+      if (deltaTotal > 0 && parent.cantidad_restante < deltaTotal) {
+        throw new Error('El lote origen no tiene suficientes polines disponibles para esta ampliación.');
+      }
+
+      // Actualizar parent
+      await supabase
+        .from('movimiento_polines')
+        .update({
+          cantidad_restante: parent.cantidad_restante - deltaTotal,
+          fecha_fin: (parent.cantidad_restante - deltaTotal) === 0 ? new Date(fecha_inicio).toISOString() : null
+        })
+        .eq('id', parent.id);
+
+      // Ajustar inventario
+      const deltaBuenos = cBuenos - rec.cantidad_buenos;
+      if (deltaBuenos !== 0) {
+        const { data: inv } = await supabase
+          .from('inventario')
+          .select('*')
+          .eq('tipo_polin_id', parent.tipo_polin_id)
+          .eq('color_polin_id', parent.color_polin_id)
+          .single();
+        if (inv) {
+          await supabase
+            .from('inventario')
+            .update({ cantidad_disponible: inv.cantidad_disponible + deltaBuenos })
+            .eq('id', inv.id);
+        }
+      }
+
+      // Actualizar movimientos hijos de DEVOLUCION / SINIESTRO
+      // 1. Devolución (Buenos)
+      if (cBuenos > 0) {
+        const { data: movDev } = await supabase
+          .from('movimiento_polines')
+          .select('*')
+          .eq('movimiento_origen_id', rec.movimiento_origen_id)
+          .eq('tipo_movimiento', 'DEVOLUCION')
+          .limit(1);
+        if (movDev && movDev.length > 0) {
+          await supabase
+            .from('movimiento_polines')
+            .update({
+              cantidad: cBuenos,
+              fecha_inicio: new Date(fecha_inicio).toISOString(),
+              fecha_fin: new Date(fecha_inicio).toISOString(),
+              remision
+            })
+            .eq('id', movDev[0].id);
+        } else {
+          // Crear si no existía
+          await supabase.from('movimiento_polines').insert([{
+            cliente_directo_id: parent.cliente_directo_id,
+            tipo_polin_id: parent.tipo_polin_id,
+            color_polin_id: parent.color_polin_id,
+            cantidad: cBuenos,
+            cantidad_restante: 0,
+            tipo_movimiento: 'DEVOLUCION',
+            estado_uso: 'ALMACENAMIENTO',
+            movimiento_origen_id: rec.movimiento_origen_id,
+            fecha_inicio: new Date(fecha_inicio).toISOString(),
+            fecha_fin: new Date(fecha_inicio).toISOString(),
+            remision
+          }]);
+        }
+      } else {
+        // Si ahora es 0, eliminar
+        await supabase
+          .from('movimiento_polines')
+          .delete()
+          .eq('movimiento_origen_id', rec.movimiento_origen_id)
+          .eq('tipo_movimiento', 'DEVOLUCION');
+      }
+
+      // 2. Siniestro (Siniestrados)
+      if (cSiniestrados > 0) {
+        const { data: movSin } = await supabase
+          .from('movimiento_polines')
+          .select('*')
+          .eq('movimiento_origen_id', rec.movimiento_origen_id)
+          .eq('tipo_movimiento', 'SINIESTRO')
+          .limit(1);
+        if (movSin && movSin.length > 0) {
+          await supabase
+            .from('movimiento_polines')
+            .update({
+              cantidad: cSiniestrados,
+              fecha_inicio: new Date(fecha_inicio).toISOString(),
+              fecha_fin: new Date(fecha_inicio).toISOString()
+            })
+            .eq('id', movSin[0].id);
+        } else {
+          await supabase.from('movimiento_polines').insert([{
+            cliente_directo_id: parent.cliente_directo_id,
+            tipo_polin_id: parent.tipo_polin_id,
+            color_polin_id: parent.color_polin_id,
+            cantidad: cSiniestrados,
+            cantidad_restante: 0,
+            tipo_movimiento: 'SINIESTRO',
+            estado_uso: 'SINIESTRO',
+            movimiento_origen_id: rec.movimiento_origen_id,
+            fecha_inicio: new Date(fecha_inicio).toISOString(),
+            fecha_fin: new Date(fecha_inicio).toISOString()
+          }]);
+        }
+      } else {
+        await supabase
+          .from('movimiento_polines')
+          .delete()
+          .eq('movimiento_origen_id', rec.movimiento_origen_id)
+          .eq('tipo_movimiento', 'SINIESTRO');
+      }
+
+      // Actualizar recepción
+      const { error: updErr } = await supabase
+        .from('recepcion_polines')
+        .update({
+          cantidad_liberada: newTotal,
+          cantidad_buenos: cBuenos,
+          cantidad_siniestrados: cSiniestrados,
+          fecha_recepcion: new Date(fecha_inicio).toISOString(),
+          remision
+        })
+        .eq('id', recId);
+      if (updErr) throw new Error(updErr.message);
+    }
+
+    return { success: true };
+  } else {
+    // Si es un movimiento de tipo DEVOLUCION o SINIESTRO en la tabla movimiento_polines
+    const { data: mov } = await supabase.from('movimiento_polines').select('*').eq('id', id).single();
+    if (mov && ['DEVOLUCION', 'SINIESTRO'].includes(mov.tipo_movimiento)) {
+      const { data: rec } = await supabase
+        .from('recepcion_polines')
+        .select('*')
+        .eq('movimiento_origen_id', mov.movimiento_origen_id)
+        .eq('estado_recepcion', 'RECIBIDO')
+        .limit(1);
+      if (rec && rec.length > 0) {
+        // Redirigir edición sobre la recepción que lo contiene
+        let newBuenos = rec[0].cantidad_buenos;
+        let newSiniestrados = rec[0].cantidad_siniestrados;
+        if (mov.tipo_movimiento === 'DEVOLUCION') {
+          newBuenos = cantidad;
+        } else {
+          newSiniestrados = cantidad;
+        }
+        return editarTransaccion(`dev-${rec[0].id}`, {
+          cantidad_buenos: newBuenos,
+          cantidad_siniestrados: newSiniestrados,
+          fecha_inicio,
+          remision,
+          orden_compra
+        });
+      }
+    }
+
+    const { data: currentMov, error: getErr } = await supabase.from('movimiento_polines').select('*').eq('id', id).single();
+    if (getErr) throw new Error(getErr.message);
+
+    const delta = cantidad - currentMov.cantidad;
+    const minCantidad = currentMov.cantidad - currentMov.cantidad_restante;
+    if (cantidad < minCantidad) {
+      throw new Error(`La cantidad no puede ser menor a la ya consumida por envíos o recepciones (${minCantidad}).`);
+    }
+
+    if (!currentMov.movimiento_origen_id) {
+      // Ajustar inventario
+      const { data: inv } = await supabase
+        .from('inventario')
+        .select('*')
+        .eq('tipo_polin_id', currentMov.tipo_polin_id)
+        .eq('color_polin_id', currentMov.color_polin_id)
+        .single();
+      if (inv) {
+        if (delta > 0 && inv.cantidad_disponible < delta) {
+          throw new Error('Inventario insuficiente para esta edición.');
+        }
+        await supabase
+          .from('inventario')
+          .update({ cantidad_disponible: inv.cantidad_disponible - delta })
+          .eq('id', inv.id);
+      }
+    } else {
+      // Ajustar lote padre
+      const { data: parent } = await supabase.from('movimiento_polines').select('*').eq('id', currentMov.movimiento_origen_id).single();
+      if (parent) {
+        if (delta > 0 && parent.cantidad_restante < delta) {
+          throw new Error('El lote origen no tiene suficientes polines disponibles para esta ampliación.');
+        }
+        await supabase
+          .from('movimiento_polines')
+          .update({
+            cantidad_restante: parent.cantidad_restante - delta,
+            fecha_fin: (parent.cantidad_restante - delta) === 0 ? new Date(fecha_inicio).toISOString() : null
+          })
+          .eq('id', parent.id);
+      }
+    }
+
+    const updatePayload = {
+      cantidad: cantidad,
+      cantidad_restante: currentMov.cantidad_restante + delta,
+      fecha_inicio: new Date(fecha_inicio).toISOString(),
+      remision,
+      orden_compra
+    };
+
+    if (currentMov.cantidad_restante + delta === 0) {
+      updatePayload.fecha_fin = new Date(fecha_inicio).toISOString();
+    } else {
+      updatePayload.fecha_fin = null;
+    }
+
+    const { error: updErr } = await supabase
+      .from('movimiento_polines')
+      .update(updatePayload)
+      .eq('id', id);
+
+    if (updErr) throw new Error(updErr.message);
+
+    return { success: true };
+  }
 };
 
 
