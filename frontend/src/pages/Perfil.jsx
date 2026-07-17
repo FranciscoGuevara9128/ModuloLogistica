@@ -100,7 +100,7 @@ const Perfil = () => {
 
     if (filtroTipo) {
       const displayType = (mov.tipo_movimiento === 'ENTREGA' && mov.estado_uso === 'TRANSPORTE') 
-        ? 'ENVIO' 
+        ? 'TRANSITO' 
         : mov.tipo_movimiento;
 
       if (displayType !== filtroTipo) return false;
@@ -359,7 +359,8 @@ const Perfil = () => {
               >
                 <option value="">Todos los tipos</option>
                 <option value="ENTREGA">ENTREGA</option>
-                <option value="ENVIO">ENVÍO</option>
+                <option value="TRANSITO">TRÁNSITO</option>
+                <option value="RECEPCION">RECEPCIÓN</option>
                 <option value="TRASLADO">TRASLADO</option>
                 <option value="TRANSFERENCIA">TRANSFERENCIA (Interna)</option>
                 <option value="DEVOLUCION">DEVOLUCION</option>
@@ -404,13 +405,15 @@ const Perfil = () => {
               <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-700">
                 {filteredHistorial.map((mov) => {
                   const dateObj = parseUTCDate(mov.fecha_inicio);
-                  const displayType = (mov.tipo_movimiento === 'ENTREGA' && mov.estado_uso === 'TRANSPORTE') ? 'ENVIO' : mov.tipo_movimiento;
+                  const displayType = (mov.tipo_movimiento === 'ENTREGA' && mov.estado_uso === 'TRANSPORTE') ? 'TRANSITO' : mov.tipo_movimiento;
                   
                   let labelTipo = displayType;
                   if (displayType === 'ENTREGA') {
                     labelTipo = `ENTREGA (${mov.estado_uso === 'PULL_FIJO' ? 'Pull Fijo' : 'Almacenamiento Temporal'})`;
-                  } else if (displayType === 'ENVIO') {
-                    labelTipo = 'ENVÍO';
+                  } else if (displayType === 'TRANSITO') {
+                    labelTipo = 'TRÁNSITO';
+                  } else if (displayType === 'RECEPCION') {
+                    labelTipo = 'RECEPCIÓN';
                   }
 
                   return (
@@ -451,7 +454,8 @@ const Perfil = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                           displayType === 'ENTREGA' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
-                          displayType === 'ENVIO' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' :
+                          displayType === 'TRANSITO' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' :
+                          displayType === 'RECEPCION' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' :
                           displayType === 'TRANSFERENCIA' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' :
                           displayType === 'TRASLADO' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' :
                           displayType === 'DEVOLUCION' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' :
