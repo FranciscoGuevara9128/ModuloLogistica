@@ -434,21 +434,25 @@ export const getHistorial = async ({ rol, entityIds = [] }) => {
 
   if (!movimientos || movimientos.length === 0) return [];
 
-  // Mapear movimientos para identificar y etiquetar TRASLADOS
+  // Mapear movimientos para identificar y etiquetar TRASLADOS y RECEPCIONES
   const mappedMovimientos = movimientos.map(mov => {
+    let m = { ...mov };
+    if (m.tipo_movimiento === 'DEVOLUCION') {
+      m.tipo_movimiento = 'RECEPCION';
+    }
     if (
-      mov.tipo_movimiento === 'TRANSFERENCIA' &&
-      mov.movimiento_origen &&
-      mov.movimiento_origen.cliente_directo_id !== mov.cliente_directo_id
+      m.tipo_movimiento === 'TRANSFERENCIA' &&
+      m.movimiento_origen &&
+      m.movimiento_origen.cliente_directo_id !== m.cliente_directo_id
     ) {
       return {
-        ...mov,
+        ...m,
         tipo_movimiento: 'TRASLADO',
-        cliente_origen: mov.movimiento_origen.cliente_directo,
-        cliente_destino: mov.cliente_directo
+        cliente_origen: m.movimiento_origen.cliente_directo,
+        cliente_destino: m.cliente_directo
       };
     }
-    return mov;
+    return m;
   });
 
   const movIds = mappedMovimientos.map(m => m.id);

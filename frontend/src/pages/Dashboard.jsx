@@ -254,7 +254,7 @@ const Dashboard = () => {
               <tbody className="divide-y divide-gray-200 dark:divide-slate-800 bg-white dark:bg-slate-900">
                 {historialReciente.map((mov) => {
                   const dateObj = parseUTCDate(mov.fecha_inicio);
-                  const displayType = (mov.tipo_movimiento === 'ENTREGA' && mov.estado_uso === 'TRANSPORTE') ? 'ENVIO' : mov.tipo_movimiento;
+                  const displayType = (mov.tipo_movimiento === 'ENTREGA' && mov.estado_uso === 'TRANSPORTE') ? 'TRANSITO' : mov.tipo_movimiento;
                   const serviceLabel = mov.estado_uso === 'ALMACENAMIENTO' ? 'Almacenamiento Temporal' :
                                        mov.estado_uso === 'TRANSPORTE' ? 'Tránsito' :
                                        mov.estado_uso === 'PULL_FIJO' ? 'Pull Fijo' :
@@ -277,7 +277,8 @@ const Dashboard = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                           displayType === 'ENTREGA' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
-                          displayType === 'ENVIO' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' :
+                          displayType === 'TRANSITO' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' :
+                          displayType === 'RECEPCION' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' :
                           displayType === 'TRANSFERENCIA' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' :
                           displayType === 'TRASLADO' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400' :
                           displayType === 'DEVOLUCION' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' :
